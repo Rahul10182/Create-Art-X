@@ -49,7 +49,7 @@ const LoginPage = () => {
       dispatch(
         loginSuccess({
           name: userCredential.name,
-          regNumber: userCredential.regNumber,
+          username: userCredential.username,
           avatar: userCredential.avatar || "/default-avatar.png",
         })
       );
