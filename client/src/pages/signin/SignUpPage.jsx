@@ -79,7 +79,7 @@ const SignupPage = () => {
       );
 
       console.log("Signup successful!");
-      navigate("/home");
+      navigate("/dashboard");
     } catch (error) {
       console.error("Signup error:", error.message);
       alert("Signup failed. Please try again.");
@@ -111,6 +111,39 @@ const SignupPage = () => {
     debouncedCheck();
     return () => debouncedCheck.cancel();
   }, [input.username]);
+
+  const handleGoogleSignup = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Save user data to your backend
+      await signupUser({
+        firebaseUID: user.uid,
+        name: user.displayName,
+        email: user.email,
+        role: "user",  // Default or dynamic based on your app logic
+      });
+
+      // Dispatch login success
+      dispatch(
+        loginSuccess({
+          uid: user.uid,
+          name: user.displayName,
+          email: user.email,
+          role: "user",  // Adjust if necessary
+        })
+      );
+
+      // Navigate to home/dashboard
+      navigate("/dashboard");
+
+    } catch (error) {
+      console.error("Google Sign-in error:", error.message);
+      alert("Failed to sign in with Google. Please try again.");
+    }
+  };
 
   return (
     <Box
@@ -319,6 +352,7 @@ const SignupPage = () => {
           variant="outlined"
           startIcon={<GoogleIcon />}
           sx={socialButtonStyles}
+          onClick={handleGoogleSignup}
         >
           Continue with Google
         </Button>
