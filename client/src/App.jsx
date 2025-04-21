@@ -13,9 +13,9 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/login" element={user ? <Navigate to="/home" /> : <Login />} />
-        <Route path="/signup" element={user ? <Navigate to="/home" /> : <Signup />} />
-        <Route path="/home" element={user ? <Home /> : <Navigate to="/login" />} />
+        <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
+        <Route path="/signup" element={user ? <Navigate to="/dashboard" /> : <Signup />} />
+        <Route path="/dashboard" element={user ? <Home /> : <Navigate to="/login" />} />
         <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/login" />} />
       </Routes>
     </Router>

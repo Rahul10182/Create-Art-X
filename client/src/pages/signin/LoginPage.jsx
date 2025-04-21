@@ -18,6 +18,8 @@ import backgroundAnimation from "../../assets/animations/background-animation.js
 import { Typewriter } from "react-simple-typewriter"; // Import Typewriter
 import GoogleIcon from "@mui/icons-material/Google"; //Import Google Icon
 import FacebookIcon from "@mui/icons-material/Facebook"; // Import Facebook Icon
+import { signInWithPopup } from "firebase/auth";
+import { googleProvider } from "../../firebase/config";
 
 const LoginPage = () => {
   const [input, setInput] = useState({ email: "", password: "" });
@@ -55,10 +57,33 @@ const LoginPage = () => {
       );
 
       console.log("Login successful!");
-      navigate("/home");
+      navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error.message);
       setError("Invalid email or password. Please try again.");
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const googleUser = result.user;
+  
+      // Call your backend with the UID
+      await loginUser(googleUser.uid);
+  
+      dispatch(
+        loginSuccess({
+          name: googleUser.displayName,
+          avatar: googleUser.photoURL || "/default-avatar.png",
+        })
+      );
+  
+      console.log("Google Login successful!");
+      navigate("/dashboard");
+    } catch (err) {
+      console.error("Google login error:", err.message);
+      setError("Google login failed. Please try again.");
     }
   };
 
@@ -220,6 +245,7 @@ const LoginPage = () => {
           variant="outlined"
           color="inherit"
           startIcon={<GoogleIcon />}
+          onClick={handleGoogleLogin}
           sx={{
             mb: 2,
             borderColor: "#ffffff",

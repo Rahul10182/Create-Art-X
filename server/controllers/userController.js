@@ -41,7 +41,7 @@ export const addUser = async (req, res) => {
 export const getUserByUID = async (req, res) => {
   try {
     const { uid } = req.params;
-    const user = await User.findOne({ firebaseUID: uid });
+    const user = await User.findOne({ firebaseUID: uid.trim() });
 
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });

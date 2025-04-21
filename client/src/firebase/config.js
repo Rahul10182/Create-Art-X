@@ -1,6 +1,6 @@
 // Import Firebase SDKs
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth , GoogleAuthProvider} from "firebase/auth";
 
 // 🔹 Your Firebase project configuration
 const firebaseConfig = {
@@ -14,8 +14,10 @@ const firebaseConfig = {
 
 // 🔹 Initialize Firebase
 const app = initializeApp(firebaseConfig);
+const googleProvider = new GoogleAuthProvider();
+
 
 // 🔹 Get Firebase Authentication instance
 const auth = getAuth(app);
 
-export { auth, app };
+export { auth, app , googleProvider};
