@@ -82,7 +82,8 @@ const Navbar = ({ allBoards, setAllBoards }) => {
 
   const handleLogout = () => {
     localStorage.clear();
-    navigate('/');
+    console.log("Logging out");
+    navigate('/login');
   };
 
   return (

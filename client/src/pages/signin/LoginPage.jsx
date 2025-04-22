@@ -44,15 +44,15 @@ const LoginPage = () => {
         input.password
       );
       const firebaseUser = userCredential.user;
-
+      console.log("firebaseUser :",firebaseUser)
       // 🔹 Send Firebase UID to the backend
       await loginUser(firebaseUser.uid);
 
       dispatch(
         loginSuccess({
-          name: userCredential.name,
-          username: userCredential.username,
-          avatar: userCredential.avatar || "/default-avatar.png",
+          uid: user.uid,
+          name: user.displayName,
+          email: user.email,
         })
       );
 
@@ -74,8 +74,9 @@ const LoginPage = () => {
   
       dispatch(
         loginSuccess({
+          uid: googleUser.uid,
           name: googleUser.displayName,
-          avatar: googleUser.photoURL || "/default-avatar.png",
+          email: googleUser.email,
         })
       );
   
