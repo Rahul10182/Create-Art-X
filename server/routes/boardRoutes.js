@@ -1,5 +1,5 @@
 import express from "express";
-import { getBoards,createBoard ,getBoardDetails} from "../controllers/boardController.js";
+import { getBoards,createBoard ,getBoardDetails, getUsersInBoard} from "../controllers/boardController.js";
 
 const router = express.Router();
 
@@ -7,5 +7,6 @@ const router = express.Router();
 router.get("/:uid", getBoards);
 router.post("/create", createBoard); 
 router.get('/:boardID', getBoardDetails);
+router.get("/:boardID/users", getUsersInBoard);
 
-export default router;
+export default router;    
