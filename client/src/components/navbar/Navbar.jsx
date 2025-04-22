@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { getBoards } from '../../apis/boardApi';
 import {
   Popover,
   Button,
@@ -11,10 +10,11 @@ import {
   DialogContentText,
   DialogTitle
 } from "@mui/material";
+import { getBoards } from '../../apis/boardApi';
 
 const Navbar = ({ allBoards, setAllBoards }) => {
-    const currentUser = useSelector((state) => state.auth.currentUser);
-    const [searchTerm, setSearchTerm] = useState('');
+  const currentUser = useSelector((state) => state.auth.currentUser);
+  const [searchTerm, setSearchTerm] = useState('');
   const [constBoards, setConstBoards] = useState(allBoards);
   const [anchorEl, setAnchorEl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,13 +23,6 @@ const Navbar = ({ allBoards, setAllBoards }) => {
 
   const open = Boolean(anchorEl);
 
-  const handleLogout = () => {
-    // Clear any authentication tokens or user data here
-    localStorage.clear(); 
-    navigate('/');
-  };
-
-  // Initial load
   useEffect(() => {
     if (currentUser?.firebaseUID) {
       fetchBoards();
@@ -87,8 +80,13 @@ const Navbar = ({ allBoards, setAllBoards }) => {
     setOpenDeleteDialog(false);
   };
 
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/');
+  };
+
   return (
-    <div className="flex items-center justify-between p-4 border-b bg-gray-900 shadow-lg">
+    <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-indigo-500 to-blue-600 shadow-lg">
       <div className="text-3xl font-extrabold text-white">Create-X</div>
 
       <form className="flex items-center bg-white p-1 rounded-lg shadow-inner" onSubmit={(e) => e.preventDefault()}>
@@ -142,7 +140,7 @@ const Navbar = ({ allBoards, setAllBoards }) => {
           PaperProps={{ style: { width: 200, height: 100, overflow: 'auto' } }}
         >
           <div className="flex flex-col p-4">
-            <Button onClick={() => navigate("/logout")} color="primary">
+            <Button onClick={handleLogout} color="primary">
               Sign Out
             </Button>
             <Button onClick={handleDeleteDialogOpen} color="error">

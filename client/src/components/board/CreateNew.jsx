@@ -15,7 +15,8 @@ const CreateNew = () => {
 
         try {
         // Call your backend to create a new board
-        const boardID = await createBoard(currentUser.uid);
+        //console.log("Inside create new: ",currentUser.user.uid);
+        const boardID = await createBoard(currentUser.user.uid); // Pass the Firebase UID to the API call
         navigate(`/create/${boardID}`);
         } catch (error) {
         console.error('Error creating board:', error);

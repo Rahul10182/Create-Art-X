@@ -20,6 +20,7 @@ const Home = () => {
       }
 
       try {
+        console.log(user);
         console.log('Fetching boards for user:', user.uid);
         const boards = await getBoards(user.uid); // ✅ use uid from Firebase
         setAllBoards(boards);

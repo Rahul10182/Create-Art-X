@@ -67,3 +67,23 @@ export const getBoardDetails = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+// Fetch users associated with a specific board
+
+export const getUsersInBoard = async (req, res) => {
+  const { boardID } = req.params;
+
+  try {
+    // Find users where `boards` array contains the boardID
+    const users = await User.find({ boards: boardID }).select("name");
+
+    if (!users || users.length === 0) {
+      return res.status(404).json({ message: "No users found for this board" });
+    }
+
+    const userNames = users.map((user) => user.name);
+    res.status(200).json({ users: userNames });
+  } catch (error) {
+    console.error("Error fetching users for board:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
