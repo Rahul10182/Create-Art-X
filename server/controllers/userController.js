@@ -8,12 +8,14 @@ export const addUser = async (req, res) => {
   try {
     const userData = req.body;
     const { firebaseUID, name, username, email } = userData;
+    console.log("userData :",userData);
 
-    if (!firebaseUID || !name || !username || !email) {
+    if (!firebaseUID || !name || !email) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
     // Check if username is already taken
+   
     const existingUsername = await User.findOne({ username });
     if (existingUsername) {
       return res.status(400).json({ success: false, message: "Username already exists" });

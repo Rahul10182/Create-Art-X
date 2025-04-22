@@ -16,7 +16,7 @@ import {
   Google as GoogleIcon,
   Facebook as FacebookIcon,
 } from "@mui/icons-material";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword ,GoogleAuthProvider, signInWithPopup} from "firebase/auth";
 import { auth } from "../../firebase/config"; // Ensure this file exists
 import { signupUser } from "../../apis/authApi"; // API call to backend
 import Lottie from "lottie-react";
@@ -117,13 +117,15 @@ const SignupPage = () => {
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+      console.log(user);
 
       // Save user data to your backend
       await signupUser({
         firebaseUID: user.uid,
         name: user.displayName,
         email: user.email,
-        role: "user",  // Default or dynamic based on your app logic
+        username: user.username ,
+          // Default or dynamic based on your app logic
       });
 
       // Dispatch login success
@@ -132,7 +134,7 @@ const SignupPage = () => {
           uid: user.uid,
           name: user.displayName,
           email: user.email,
-          role: "user",  // Adjust if necessary
+          username :user.username,
         })
       );
 
