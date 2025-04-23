@@ -3,16 +3,18 @@ import axios from "axios";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
+//get all boards for a user
 export const getBoards = async (uid) => {
   try {
     const res = await axios.get(`${API_BASE_URL}/boards/${uid}`);
     return res.data; 
   } catch (err) {
+    console.log(err);
     throw new Error("Failed to fetch boards");
+
   }
 };
-
-
+// Create a new board
 export const createBoard = async (firebaseUID) => {
   const response = await axios.post(`${API_BASE_URL}/boards/create`, { firebaseUID } );
   return response.data.boardId;
@@ -32,6 +34,12 @@ export const getBoardDetails = async (boardID) => {
   }
 };
 
+// update board details
+export const updateBoardTitle = async (boardID, title) => {
+  const res = await axios.put(`${API_BASE_URL}/api/boards/${boardID}`, { title });
+  return res.data;
+};
+
 // Fetch users in a specific board
 export const getBoardUsers = async (boardID) => {
   try {
@@ -41,5 +49,27 @@ export const getBoardUsers = async (boardID) => {
   } catch (err) {
     console.error("Failed to fetch board users:", err);
     return [];
+  }
+};
+// Update the canvas size of a board
+export const updateCanvasSize = async (boardID, width, height) => {
+  try {
+    const response = await axios.put(`${API_BASE_URL}/boards/canvas/${boardID}`, {
+      width,
+      height,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error updating canvas size:", error);
+    throw error;
+  }
+};
+// Share a board with a user
+export const shareBoardWithUser = async (boardId, userId) => {
+  try {
+    const res = await axios.post(`${API_BASE_URL}/api/boards/${boardId}/share`, { userId });
+    console.log("Board shared:", res.data);
+  } catch (err) {
+    console.error("Error sharing board:", err);
   }
 };

@@ -3,8 +3,8 @@ import { useSelector } from 'react-redux';
 import { getBoards } from '../../apis/boardApi';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/navbar/Navbar';
-import BoardCard from '../../components/board/BoardCard';
-import CreateNew from '../../components/board/CreateNew';
+import BoardCard from '../../components/home/BoardCard';
+import CreateNew from '../../components/home/CreateNew';
 
 const Home = () => {
   const user = useSelector((state) => state.auth.user); // Firebase user
@@ -22,7 +22,7 @@ const Home = () => {
       try {
         console.log(user);
         console.log('Fetching boards for user:', user.uid);
-        const boards = await getBoards(user.uid); // ✅ use uid from Firebase
+        const boards = await getBoards(user.uid); 
         setAllBoards(boards);
       } catch (error) {
         console.error('Error fetching boards:', error);
