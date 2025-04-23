@@ -11,6 +11,8 @@ import {
   DialogTitle
 } from "@mui/material";
 import { getBoards } from '../../apis/boardApi';
+import { useDispatch } from 'react-redux';
+import { logout } from '../../redux/authSlice'; 
 
 const Navbar = ({ allBoards, setAllBoards }) => {
   const currentUser = useSelector((state) => state.auth.currentUser);
@@ -20,6 +22,8 @@ const Navbar = ({ allBoards, setAllBoards }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+
 
   const open = Boolean(anchorEl);
 
@@ -81,8 +85,9 @@ const Navbar = ({ allBoards, setAllBoards }) => {
   };
 
   const handleLogout = () => {
-    localStorage.clear();
-    navigate('/');
+    dispatch(logout()); // Clear user from Redux
+    console.log("Logging out");
+    navigate('/login');
   };
 
   return (
