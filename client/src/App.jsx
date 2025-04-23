@@ -5,6 +5,7 @@ import Login from "./pages/register/Login";
 import Signup from "./pages/register/Signup";
 import Home from "./pages/home/HomePage";
 import ProfilePage from "./pages/profile/ProfilePage";
+import TestPage from "./pages/test/testing"; 
 
 function App() {
   const { user } = useSelector((state) => state.auth); // Get user from Redux
@@ -14,7 +15,6 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Landing />} />
-
         {/* Public Routes (redirect if logged in) */}
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" replace />} />
         <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/dashboard" replace />} />
@@ -25,6 +25,7 @@ function App() {
 
         {/* Fallback route */}
         <Route path="*" element={<Navigate to={user ? "/dashboard" : "/login"} replace />} />
+        <Route path="/test" element={<TestPage/>} />
       </Routes>
     </Router>
   );

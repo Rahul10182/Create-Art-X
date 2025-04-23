@@ -25,6 +25,7 @@
     "lodash.debounce": "^4.0.8",
     "lottie-react": "^2.4.1",
     "react": "^19.0.0",
+    "react-color": "^2.19.3",
     "react-dom": "^19.0.0",
     "react-icons": "^5.5.0",
     "react-konva": "^19.0.3",

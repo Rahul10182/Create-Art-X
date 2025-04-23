@@ -2,6 +2,26 @@
 import Board from "../models/BoardModel.js";
 import User from "../models/UserModel.js";
 
+export const updateCanvasSize = async (req, res) => {
+  const { boardID } = req.params;
+  const { width, height } = req.body;
+
+  try {
+    const board = await Board.findById(boardID);
+    if (!board) {
+      return res.status(404).json({ message: "Board not found" });
+    }
+
+    board.canvas = { ...board.canvas, size: { width, height } };
+    await board.save();
+
+    res.status(200).json({ message: "Canvas size updated successfully" });
+  } catch (error) {
+    console.error("Error updating canvas size:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 export const getBoards = async (req, res) => {
   const { uid } = req.params;
 
@@ -47,6 +67,7 @@ export const createBoard = async (req, res) => {
   }
 };
 
+//get board details
 export const getBoardDetails = async (req, res) => {
   const { boardID } = req.params;
 
@@ -67,8 +88,31 @@ export const getBoardDetails = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-// Fetch users associated with a specific board
+//update board details
+export const updateBoardDetails = async (req, res) => {
+  const { boardID } = req.params;
+  const { title } = req.body;
 
+  try {
+    // Find the board by ID
+    const board = await Board.findById(boardID);
+    if (!board) {
+      return res.status(404).json({ message: "Board not found" });
+    }
+
+    // Update the board title
+    board.title = title;
+    await board.save();
+
+    res.status(200).json({ message: "Board updated successfully", board });
+  } catch (error) {
+    console.error("Error updating board:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+// Fetch users associated with a specific board
 export const getUsersInBoard = async (req, res) => {
   const { boardID } = req.params;
 
@@ -85,5 +129,30 @@ export const getUsersInBoard = async (req, res) => {
   } catch (error) {
     console.error("Error fetching users for board:", error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+//share board with user
+export const shareBoardWithUser = async (req, res) => {
+  const { boardId } = req.params;
+  const { userId } = req.body;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const board = await Board.findById(boardId);
+    if (!board) return res.status(404).json({ message: "Board not found" });
+
+    // Avoid duplicate sharing
+    if (!board.sharedWith.includes(userId)) {
+      board.sharedWith.push(userId);
+      await board.save();
+    }
+
+    res.status(200).json({ message: "Board shared successfully", board });
+  } catch (error) {
+    console.error("Error sharing board:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
