@@ -99,13 +99,12 @@ const LoginPage = () => {
     <Box
       sx={{
         display: "flex",
-        height: "100vh",
         alignItems: "center",
-        justifyContent: "left",
+        justifyContent: "center",
+        height: "100vh",
         position: "relative",
         overflow: "hidden",
-        margin: 0,
-        padding: 0,
+        px: 2,
       }}
     >
       {/* Background Animation */}
@@ -121,173 +120,174 @@ const LoginPage = () => {
       >
         <Lottie animationData={backgroundAnimation} loop autoPlay />
       </Box>
-
-      {/* Typewriter Effect Text */}
-      <Typography
-        variant="h4"
+  
+      {/* Content Container */}
+      <Box
         sx={{
-          position: "absolute",
-          top: "15%",
-          left: "10%",
-          fontWeight: "bold",
-          color: "#ffffff",
-          textShadow: "0px 0px 10px rgba(255, 255, 255, 0.8)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 4,
         }}
       >
-        <Typewriter
-          words={["Hello there! Login Now"]}
-          loop={true}
-          cursor
-          cursorStyle="|"
-          typeSpeed={50}
-          deleteSpeed={30}
-        />
-      </Typography>
-
-      {/* Glassmorphic Login Card */}
-      <Paper
-        elevation={10}
-        sx={{
-          width: "400px",
-          padding: "2rem",
-          background: "rgba(255, 255, 255, 0.1)",
-          backdropFilter: "blur(10px)",
-          borderRadius: "20px",
-          boxShadow: "0px 4px 30px rgba(110, 30, 255, 0.5)",
-          border: "1px solid rgba(255, 255, 255, 0.2)",
-          textAlign: "center",
-          marginLeft: "10%",
-          marginTop: "5%",
-        }}
-      >
+        {/* Typewriter Effect Text */}
         <Typography
-          variant="h5"
-          sx={{ mb: 2, fontWeight: "bold", color: "#ffffff" }}
+          variant="h4"
+          sx={{
+            fontWeight: "bold",
+            color: "#ffffff",
+            textShadow: "0px 0px 10px rgba(255, 255, 255, 0.8)",
+            textAlign: "center",
+          }}
         >
-          Welcome Back
+          <Typewriter
+            words={["Hello there! Login Now"]}
+            loop={true}
+            cursor
+            cursorStyle="|"
+            typeSpeed={50}
+            deleteSpeed={30}
+          />
         </Typography>
-
-        {/* Display error message */}
-        {error && (
-          <Typography color="error" sx={{ mb: 2 }}>
-            {error}
+  
+        {/* Login Card */}
+        <Paper
+          elevation={10}
+          sx={{
+            width: "100%",
+            maxWidth: "400px",
+            padding: "2rem",
+            background: "rgba(255, 255, 255, 0.1)",
+            backdropFilter: "blur(10px)",
+            borderRadius: "20px",
+            boxShadow: "0px 4px 30px rgba(110, 30, 255, 0.5)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            textAlign: "center",
+          }}
+        >
+          <Typography
+            variant="h5"
+            sx={{ mb: 2, fontWeight: "bold", color: "#ffffff" }}
+          >
+            Welcome Back
           </Typography>
-        )}
-
-        {/* Login Form */}
-        <form onSubmit={handleLogin} style={{ width: "100%" }}>
-          <TextField
-            fullWidth
-            label="Email"
-            name="email"
-            type="email"
-            variant="outlined"
-            margin="normal"
-            value={input.email}
-            onChange={handleChange}
-            required
-            sx={{
-              "& label.Mui-focused": { color: "#ffffff" },
-              "& .MuiOutlinedInput-root": {
-                "& fieldset": { borderColor: "#6E1EFF" },
-                "&:hover fieldset": { borderColor: "#ffffff" },
-                "&.Mui-focused fieldset": { borderColor: "#ffffff" },
-              },
-            }}
-          />
-          <TextField
-            fullWidth
-            label="Password"
-            name="password"
-            type="password"
-            variant="outlined"
-            margin="normal"
-            value={input.password}
-            onChange={handleChange}
-            required
-            sx={{
-              "& label.Mui-focused": { color: "#ffffff" },
-              "& .MuiOutlinedInput-root": {
-                "& fieldset": { borderColor: "#6E1EFF" },
-                "&:hover fieldset": { borderColor: "#ffffff" },
-                "&.Mui-focused fieldset": { borderColor: "#ffffff" },
-              },
-            }}
-          />
+  
+          {error && (
+            <Typography color="error" sx={{ mb: 2 }}>
+              {error}
+            </Typography>
+          )}
+  
+          <form onSubmit={handleLogin} style={{ width: "100%" }}>
+            <TextField
+              fullWidth
+              label="Email"
+              name="email"
+              type="email"
+              variant="outlined"
+              margin="normal"
+              value={input.email}
+              onChange={handleChange}
+              required
+              sx={{
+                "& label.Mui-focused": { color: "#ffffff" },
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": { borderColor: "#6E1EFF" },
+                  "&:hover fieldset": { borderColor: "#ffffff" },
+                  "&.Mui-focused fieldset": { borderColor: "#ffffff" },
+                },
+              }}
+            />
+            <TextField
+              fullWidth
+              label="Password"
+              name="password"
+              type="password"
+              variant="outlined"
+              margin="normal"
+              value={input.password}
+              onChange={handleChange}
+              required
+              sx={{
+                "& label.Mui-focused": { color: "#ffffff" },
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": { borderColor: "#6E1EFF" },
+                  "&:hover fieldset": { borderColor: "#ffffff" },
+                  "&.Mui-focused fieldset": { borderColor: "#ffffff" },
+                },
+              }}
+            />
+            <Button
+              fullWidth
+              variant="contained"
+              type="submit"
+              sx={{
+                mt: 2,
+                backgroundColor: "#6E1EFF",
+                color: "#ffffff",
+                "&:hover": { backgroundColor: "#5714D9" },
+              }}
+            >
+              Login
+            </Button>
+          </form>
+  
+          <Typography variant="body2" sx={{ mt: 2, color: "#ffffff" }}>
+            First time here?{" "}
+            <Link
+              to="/signup"
+              style={{
+                color: "#6E1EFF",
+                fontWeight: "bold",
+                textDecoration: "none",
+              }}
+            >
+              Sign up now
+            </Link>
+          </Typography>
+  
+          <Divider sx={{ my: 3, borderColor: "#ffffff" }}>OR</Divider>
+  
           <Button
             fullWidth
-            variant="contained"
-            type="submit"
+            variant="outlined"
+            color="inherit"
+            startIcon={<GoogleIcon />}
+            onClick={handleGoogleLogin}
             sx={{
-              mt: 2,
-              backgroundColor: "#6E1EFF",
+              mb: 2,
+              borderColor: "#ffffff",
               color: "#ffffff",
-              "&:hover": { backgroundColor: "#5714D9" },
+              "&:hover": {
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                borderColor: "#ffffff",
+              },
             }}
           >
-            Login
+            Continue with Google
           </Button>
-        </form>
-
-        {/* First Time Here? Sign Up Now */}
-        <Typography variant="body2" sx={{ mt: 2, color: "#ffffff" }}>
-          First time here?{" "}
-          <Link
-            to="/signup"
-            style={{
-              color: "#6E1EFF",
-              fontWeight: "bold",
-              cursor: "pointer",
-              textDecoration: "none",
+  
+          <Button
+            fullWidth
+            variant="outlined"
+            color="inherit"
+            startIcon={<FacebookIcon />}
+            sx={{
+              borderColor: "#ffffff",
+              color: "#ffffff",
+              "&:hover": {
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                borderColor: "#ffffff",
+              },
             }}
           >
-            Sign up now
-          </Link>
-        </Typography>
-
-        <Divider sx={{ my: 3, borderColor: "#ffffff" }}>OR</Divider>
-
-        {/* Google Login */}
-        <Button
-          fullWidth
-          variant="outlined"
-          color="inherit"
-          startIcon={<GoogleIcon />}
-          onClick={handleGoogleLogin}
-
-          sx={{
-            mb: 2,
-            borderColor: "#ffffff",
-            color: "#ffffff",
-            "&:hover": {
-              backgroundColor: "rgba(255, 255, 255, 0.1)",
-              borderColor: "#ffffff",
-            },
-          }}
-        >
-          Continue with Google
-        </Button>
-
-        {/* Facebook Login */}
-        <Button
-          fullWidth
-          variant="outlined"
-          color="inherit"
-          startIcon={<FacebookIcon />}
-          sx={{
-            borderColor: "#ffffff",
-            color: "#ffffff",
-            "&:hover": {
-              backgroundColor: "rgba(255, 255, 255, 0.1)",
-              borderColor: "#ffffff",
-            },
-          }}
-        >
-          Continue with Facebook
-        </Button>
-      </Paper>
+            Continue with Facebook
+          </Button>
+        </Paper>
+      </Box>
     </Box>
   );
+  
 };
 
 export default LoginPage;

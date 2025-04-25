@@ -57,22 +57,6 @@ const DrawingBoard = () => {
         backgroundImage: `url(${hogwartsGallery})`, // Set Hogwarts gallery as the background
       }}
     >
-      {/* Floating Images */}
-      <img
-        src={feathers}
-        alt="feathers"
-        className="absolute top-10 left-10 w-16 animate-float opacity-80"
-      />
-      <img
-        src={stars}
-        alt="stars"
-        className="absolute right-5 top-16 w-20 opacity-70 animate-pulse"
-      />
-      <img
-        src={trainBridge}
-        alt="train bridge"
-        className="absolute bottom-5 left-1/2 transform -translate-x-1/2 w-1/3 opacity-60"
-      />
 
       {/* Magical content container */}
       <div className="flex justify-center items-center min-h-screen px-4 py-4 relative z-10">

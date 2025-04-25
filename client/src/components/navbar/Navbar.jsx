@@ -44,16 +44,25 @@ const Navbar = ({ allBoards, setAllBoards }) => {
     }
   };
 
+  const filtered = constBoards.filter(board =>
+    (board?.title ?? '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
+
   const handleSearch = () => {
     if (!searchTerm) {
       setAllBoards(constBoards);
-    } else {
-      const filtered = constBoards.filter((board) =>
-        board.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setAllBoards(filtered);
+      return;
     }
+  
+    const filtered = constBoards.filter((board) => {
+      const title = board?.title;
+      return typeof title === 'string' && title.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+  
+    setAllBoards(filtered);
   };
+  
 
   const handleAvatarClick = (event) => setAnchorEl(event.currentTarget);
   const handlePopoverClose = () => setAnchorEl(null);
