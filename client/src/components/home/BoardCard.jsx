@@ -1,13 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getBoardDetails } from '../../apis/boardApi'; // Importing the API function to get board details
+import { getBoardDetails, updateBoardTitle } from '../../apis/boardApi';
+import castle from '../../assets/castle.jpg'; 
+import train from '../../assets/train.jpg';
 
-const backgroundImages = [
-  "https://i.postimg.cc/ZRSNgqKh/Humaaans-Plant-1.png",
-  "https://i.postimg.cc/XJk500pB/Humaaans-1-Character.png",
-  "https://i.postimg.cc/TPmmCbx9/Humaaans-Plant-2.png",
-  "https://i.postimg.cc/4xjV65Dy/Humaaans-Plant-5.png",
-];
+const backgroundImages = [castle, train];
 
 const getRandomBackgroundImage = () => {
   const randomIndex = Math.floor(Math.random() * backgroundImages.length);
@@ -15,58 +12,99 @@ const getRandomBackgroundImage = () => {
 };
 
 const BoardCard = ({ boardID }) => {
-  const [title, setTitle] = useState(null);
-  const [admin, setAdmin] = useState(null);
-  const [backgroundImageURL, setBackgroundImageURL] = useState(null);
+  const [title, setTitle] = useState('');
+  const [admin, setAdmin] = useState('');
+  const [backgroundImageURL, setBackgroundImageURL] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchUserBoards = async () => {
+    const fetchBoard = async () => {
       try {
-        // Fetch board details via the API
-        console.log(" board ID :" , boardID)
-        const boardData = await getBoardDetails(boardID);
-        if (boardData) {
-          setTitle(boardData.title);
-          setAdmin(boardData.admin); // Assuming the admin's name is already fetched in boardData
-
-          // Set a random background image when component mounts
+        const data = await getBoardDetails(boardID);
+        if (data) {
+          setTitle(data.title);
+          setAdmin(data.admin);
           setBackgroundImageURL(getRandomBackgroundImage());
-        } else {
-          console.log('No board found');
         }
-      } catch (error) {
-        console.error('Error fetching board details:', error);
+      } catch (err) {
+        console.error('Failed to load board details:', err);
       }
     };
-
-    fetchUserBoards();
+      
+    fetchBoard();
   }, [boardID]);
 
-  const handleCardClick = () => {
-    navigate(`/create/${boardID}`);
+  const handleSaveTitle = async () => {
+    try {
+      await updateBoardTitle(boardID, newTitle);
+      setTitle(newTitle);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating title:', error);
+    }
   };
 
   return (
-    <button 
-      className="relative h-[200px] w-[150px] rounded-lg overflow-hidden shadow-lg transform transition-transform duration-300 hover:scale-105 hover:shadow-xl"
-      aria-label={`Board ${boardID}`}
-      onClick={handleCardClick}
+    <div
+      className="relative w-full h-64 rounded-xl shadow-[0_0_20px_rgba(255,215,0,0.3)] overflow-hidden transform hover:scale-105 transition duration-300 border-2 border-yellow-600"
       style={{
-        backgroundImage: backgroundImageURL ? `url(${backgroundImageURL})` : 'none',
+        backgroundImage: `linear-gradient(to top, rgba(0, 0, 0, 0.6), rgba(0,0,0,0.2)), url(${backgroundImageURL})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
     >
-      {/* Overlay for gradient effect */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+      {/* Optional: Parchment texture overlay */}
+      <div className="absolute inset-0 bg-[url('/assets/parchment-texture.jpg')] opacity-10 pointer-events-none"></div>
 
-      {/* Text container at the bottom */}
-      <div className="absolute bottom-0 w-full p-3 bg-black bg-opacity-40 text-white text-center">
-        <p className="font-medium text-sm truncate">{title || 'Untitled'}</p>
-        <p className="font-light text-xs truncate">{admin || ''}</p>
+      {/* Gradient + darkness overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
+
+      {/* Content */}
+      <div className="absolute bottom-0 p-4 w-full text-yellow-200 font-harry">
+        {isEditing ? (
+          <div>
+            <input
+              type="text"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              className="w-full p-2 rounded bg-white/90 text-black mb-2 shadow-inner"
+              placeholder="Enter new title"
+            />
+            <button
+              onClick={handleSaveTitle}
+              className="bg-green-600 hover:bg-green-700 px-3 py-1 text-sm rounded mr-2 shadow-md"
+            >
+              Save
+            </button>
+          </div>
+        ) : (
+          <>
+            <h3 className="text-lg font-bold truncate drop-shadow-[0_0_3px_gold]">{title || 'Untitled'}</h3>
+            {/* <p className="text-sm text-yellow-300 italic truncate">{admin || 'No Admin'}</p> */}
+            <div className="flex mt-3 gap-2">
+              <button
+                onClick={() => navigate(`/create/${boardID}`)}
+                className="bg-yellow-500 hover:bg-yellow-600 text-black px-3 py-1 text-xs rounded shadow-lg"
+              >
+                Open
+              </button>
+              <button
+                onClick={() => {
+                  setIsEditing(true);
+                  setNewTitle(title);
+                }}
+                className="bg-blue-700 hover:bg-blue-800 text-white px-3 py-1 text-xs rounded shadow-md"
+              >
+                Edit
+              </button>
+            </div>
+          </>
+        )}
       </div>
-    </button>
+    </div>
+
   );
 };
 

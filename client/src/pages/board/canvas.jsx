@@ -268,12 +268,13 @@ const Canvas = ({ tool, color, fillColor, boardID, userId }) => {
 
   return (
     <div>
-      <div className="flex gap-4 mb-4">
+      <div className="flex justify-center gap-4 mb-4">
         <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={handleManualSave}>Save</button>
         <button className="bg-yellow-500 text-white px-4 py-2 rounded" onClick={handleUndo}>Undo</button>
         <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={handleRedo}>Redo</button>
         <button className="bg-purple-500 text-white px-4 py-2 rounded" onClick={handleDownload}>Download</button>
       </div>
+
       <canvas
         ref={canvasRef}
         width={1000}
@@ -287,6 +288,7 @@ const Canvas = ({ tool, color, fillColor, boardID, userId }) => {
           setCurrentShape(null);
         }}
       />
+
     </div>
   );
 };
