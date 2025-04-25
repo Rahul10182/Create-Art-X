@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
-import axios from "axios";
-import { saveBoardForUser, getBoardForUser } from "../../apis/boardApi"; // Ensure getBoardForUser is implemented
+import { saveBoardForUser, getBoardForUser } from "../../apis/boardApi";
 
 const Canvas = ({ tool, color, fillColor, boardID, userId }) => {
   const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
+
   const [drawing, setDrawing] = useState(false);
   const [startPos, setStartPos] = useState(null);
   const [shapes, setShapes] = useState([]);
@@ -44,7 +45,7 @@ const Canvas = ({ tool, color, fillColor, boardID, userId }) => {
       saveBoardForUser(boardID, userId, shapes)
         .then(() => console.log("Auto-saved board"))
         .catch((err) => console.error("Auto-save failed", err));
-    }, 2 * 60 * 1000); // Auto-save every 2 minutes
+    }, 2 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, [shapes]);
@@ -172,6 +173,14 @@ const Canvas = ({ tool, color, fillColor, boardID, userId }) => {
           ctx.stroke();
           break;
 
+        case "image":
+          const img = new Image();
+          img.onload = () => {
+            ctx.drawImage(img, shape.x, shape.y, shape.width, shape.height);
+          };
+          img.src = shape.src;
+          break;
+
         default:
           break;
       }
@@ -196,7 +205,6 @@ const Canvas = ({ tool, color, fillColor, boardID, userId }) => {
     if (!drawing) return;
     const pos = getMousePos(e);
     const canvas = canvasRef.current;
-
     if (pos.x < 0 || pos.y < 0 || pos.x > canvas.width || pos.y > canvas.height) return;
 
     if (tool === "eraser") {
@@ -266,6 +274,28 @@ const Canvas = ({ tool, color, fillColor, boardID, userId }) => {
     link.click();
   };
 
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const shape = {
+          type: "image",
+          src: reader.result,
+          x: 100,
+          y: 100,
+          width: 200,
+          height: 150
+        };
+        setShapes((prev) => [...prev, shape]);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div>
       <div className="flex justify-center gap-4 mb-4">
@@ -273,6 +303,8 @@ const Canvas = ({ tool, color, fillColor, boardID, userId }) => {
         <button className="bg-yellow-500 text-white px-4 py-2 rounded" onClick={handleUndo}>Undo</button>
         <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={handleRedo}>Redo</button>
         <button className="bg-purple-500 text-white px-4 py-2 rounded" onClick={handleDownload}>Download</button>
+        <button className="bg-pink-500 text-white px-4 py-2 rounded" onClick={() => fileInputRef.current.click()}>Upload Image</button>
+        <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} className="hidden" />
       </div>
 
       <canvas
@@ -288,7 +320,6 @@ const Canvas = ({ tool, color, fillColor, boardID, userId }) => {
           setCurrentShape(null);
         }}
       />
-
     </div>
   );
 };

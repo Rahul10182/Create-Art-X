@@ -152,7 +152,7 @@ const SignupPage = () => {
         display: "flex",
         height: "100vh",
         alignItems: "center",
-        justifyContent: "left",
+        justifyContent: "center",
         position: "relative",
         overflow: "hidden",
         margin: 0,
@@ -205,12 +205,12 @@ const SignupPage = () => {
           border: "1px solid rgba(255, 255, 255, 0.2)",
           textAlign: "center",
           marginLeft: "10%",
-          marginTop: "5%",
+          marginTop: "0%",
         }}
       >
         <Typography
           variant="h5"
-          sx={{ mb: 2, fontWeight: "bold", color: "#ffffff" }}
+          sx={{ mb: 1, fontWeight: "bold", color: "#ffffff" }}
         >
           Create Your Account
         </Typography>
@@ -342,7 +342,7 @@ const SignupPage = () => {
           </Button>
         </form>
 
-        <Divider sx={{ my: 3, borderColor: "#ffffff" }}>OR</Divider>
+        <Divider sx={{ my: 1 }}></Divider>
 
         <Button
           fullWidth

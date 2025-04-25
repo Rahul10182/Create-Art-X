@@ -50,7 +50,7 @@ const BoardCard = ({ boardID }) => {
     <div
       className="relative w-full h-64 rounded-xl shadow-[0_0_20px_rgba(255,215,0,0.3)] overflow-hidden transform hover:scale-105 transition duration-300 border-2 border-yellow-600"
       style={{
-        backgroundImage: `linear-gradient(to top, rgba(0, 0, 0, 0.6), rgba(0,0,0,0.2)), url(${backgroundImageURL})`,
+        backgroundImage: `url(${backgroundImageURL})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
@@ -59,7 +59,7 @@ const BoardCard = ({ boardID }) => {
       <div className="absolute inset-0 bg-[url('/assets/parchment-texture.jpg')] opacity-10 pointer-events-none"></div>
 
       {/* Gradient + darkness overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
+      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent"></div>
 
       {/* Content */}
       <div className="absolute bottom-0 p-4 w-full text-yellow-200 font-harry">
