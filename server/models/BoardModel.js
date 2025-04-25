@@ -11,7 +11,8 @@ const boardSchema = new mongoose.Schema({
       height: { type: Number, default: 600 },
     }
   },
-  sharedWith: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }]  
+  sharedWith: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  shapes: { type: Array, default: [] },   
 });
 
 

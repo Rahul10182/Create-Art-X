@@ -156,3 +156,79 @@ export const shareBoardWithUser = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+// Backend API handler to save the board for a user
+export const saveBoardForUser = async (req, res) => {
+  const { boardID, userId, shapes } = req.body; // Receive shapes from the request body
+
+  console.log("Firebase UID:", userId);
+  console.log("boardId:", boardID);
+
+  try {
+    // Find the board by its ID
+    const board = await Board.findById(boardID);
+    if (!board) {
+      return res.status(404).json({ message: "Board not found" });
+    }
+
+    // Find the user by their Firebase UID
+    const user = await User.findOne({ firebaseUID: userId });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Add user to the board.sharedWith if not already present
+    if (!board.sharedWith.some(id => id.toString() === user._id.toString())) {
+      board.sharedWith.push(user._id);
+      await board.save();
+    }
+
+    // Add board to the user's boards list if not already present
+    if (!user.boards.some(id => id.toString() === boardID)) {
+      user.boards.push(boardID);
+      await user.save();
+    }
+
+    // Save the shapes to the board (assuming you want to store the drawing state in the board)
+    board.shapes = shapes; // This could be a new field that stores the shapes
+    await board.save();
+
+    res.status(200).json({ message: "Board associated with user and shapes saved successfully" });
+  } catch (error) {
+    console.error("Error associating board with user:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+export const getBoardForUser = async (req, res) => {
+  const { boardID, userId } = req.body;
+  console.log("boardID", boardID);
+  console.log("userId", userId);
+
+  try {
+    const user = await User.findOne({ firebaseUID: userId });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const board = await Board.findOne({
+      _id: boardID,
+      $or: [
+        { createdBy: user._id },
+        { sharedWith: user._id } // 🔁 changed from members to sharedWith
+      ]
+    })
+      .populate('createdBy', 'name email')
+      .populate('sharedWith', 'name email'); // 🔁 changed from members to sharedWith
+
+    if (!board) {
+      return res.status(404).json({ message: 'Board not found or access denied' });
+    }
+
+    res.status(200).json(board);
+  } catch (error) {
+    console.error('Error fetching board:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};

@@ -91,7 +91,7 @@ const Navbar = ({ allBoards, setAllBoards }) => {
   };
 
   return (
-    <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-indigo-500 to-blue-600 shadow-lg">
+    <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-zinc-900 via-zinc-600 to-zinc-900 shadow-lg">
       <div className="text-3xl font-extrabold text-white">Create-X</div>
 
       <form className="flex items-center bg-white p-1 rounded-lg shadow-inner" onSubmit={(e) => e.preventDefault()}>

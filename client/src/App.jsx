@@ -6,6 +6,8 @@ import Signup from "./pages/register/Signup";
 import Home from "./pages/home/HomePage";
 import ProfilePage from "./pages/profile/ProfilePage";
 import TestPage from "./pages/test/testing"; 
+import Board from "./pages/board/Board"; 
+import ElementBoard from "./pages/board/ElementBoard"; 
 
 function App() {
   const { user } = useSelector((state) => state.auth); // Get user from Redux
@@ -22,6 +24,8 @@ function App() {
         {/* Protected Routes */}
         <Route path="/dashboard" element={user ? <Home /> : <Navigate to="/login" replace />} />
         <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/login" replace />} />
+        <Route path="/board" element={user ? <Board /> : <Navigate to="/login" replace />} />
+        <Route path="/create/:boardID" element={user ? <ElementBoard /> : <Navigate to="/login" replace />} />
 
         {/* Fallback route */}
         <Route path="*" element={<Navigate to={user ? "/dashboard" : "/login"} replace />} />
