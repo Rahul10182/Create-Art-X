@@ -23,6 +23,7 @@ const Home = () => {
         console.log(user);
         console.log('Fetching boards for user:', user.uid);
         const boards = await getBoards(user.uid); 
+        console.log("boards: ", boards);
         setAllBoards(boards);
       } catch (error) {
         console.error('Error fetching boards:', error);
@@ -44,7 +45,7 @@ const Home = () => {
           <div className='grid grid-cols-8 gap-2 m-3'>
             <CreateNew />
             {allBoards.map((board) => (
-              <BoardCard key={board._id} board={board} />
+              <BoardCard boardID={board._id} />
             ))}
           </div>
         </div>

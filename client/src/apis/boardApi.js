@@ -6,7 +6,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000
 //get all boards for a user
 export const getBoards = async (uid) => {
   try {
-    const res = await axios.get(`${API_BASE_URL}/boards/${uid}`);
+    const res = await axios.get(`${API_BASE_URL}/boards/user/${uid}`);
     return res.data; 
   } catch (err) {
     console.log(err);
@@ -73,3 +73,35 @@ export const shareBoardWithUser = async (boardId, userId) => {
     console.error("Error sharing board:", err);
   }
 };
+
+// Save board shapes (auto-save feature)
+// Client-side API request to save the board
+export const saveBoardForUser = async (boardID, userId, shapes) => {
+  try {
+    console.log("boardID", boardID);
+    console.log("userId", userId);
+    
+    // Sending both in the body of the request
+    const response = await axios.post(`${API_BASE_URL}/boards/save`, {
+      boardID,
+      userId,
+      shapes, // Send the shapes as part of the request body
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Failed to save board for user:", error);
+    throw error;
+  }
+};
+
+
+export const getBoardForUser = async (boardID, userId) => {
+  const res = await axios.post(`${API_BASE_URL}/boards/get`, {
+    boardID,
+    userId,
+  });
+  return res.data;
+};
+
+

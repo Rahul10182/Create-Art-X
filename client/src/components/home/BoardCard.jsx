@@ -24,6 +24,7 @@ const BoardCard = ({ boardID }) => {
     const fetchUserBoards = async () => {
       try {
         // Fetch board details via the API
+        console.log(" board ID :" , boardID)
         const boardData = await getBoardDetails(boardID);
         if (boardData) {
           setTitle(boardData.title);

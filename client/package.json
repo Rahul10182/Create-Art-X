@@ -24,6 +24,7 @@
     "konva": "^9.3.20",
     "lodash.debounce": "^4.0.8",
     "lottie-react": "^2.4.1",
+    "lucide-react": "^0.503.0",
     "react": "^19.0.0",
     "react-color": "^2.19.3",
     "react-dom": "^19.0.0",
