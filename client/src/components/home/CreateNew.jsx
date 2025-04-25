@@ -25,12 +25,13 @@ const CreateNew = () => {
 
   return (
     <button
-      className="h-[200px] w-[150px] rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-5xl font-semibold text-white flex flex-col items-center justify-center shadow-md hover:shadow-lg transition-shadow duration-200"
+      className="h-[220px] w-[160px] rounded-xl bg-gradient-to-b from-[#2e1a47] to-[#1b102b] border-2 border-yellow-700 text-yellow-300 font-harry text-5xl flex flex-col items-center justify-center shadow-[0_0_25px_rgba(255,215,0,0.4)] hover:shadow-[0_0_35px_rgba(255,215,0,0.7)] transition-all duration-300 transform hover:scale-105"
       onClick={handleCreateNew}
     >
-      <p className="font-medium">+</p>
-      <span className="text-sm text-gray-100 font-light mt-2">Create New Canvas</span>
+      <p className="font-harry drop-shadow-[0_0_5px_gold]">+</p>
+      <span className="text-sm mt-3 text-yellow-200 font-light tracking-widest italic">Create New</span>
     </button>
+
   );
 };
 

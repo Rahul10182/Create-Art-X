@@ -36,7 +36,7 @@ export const getBoardDetails = async (boardID) => {
 
 // update board details
 export const updateBoardTitle = async (boardID, title) => {
-  const res = await axios.put(`${API_BASE_URL}/api/boards/${boardID}`, { title });
+  const res = await axios.put(`${API_BASE_URL}/boards/${boardID}`, { title });
   return res.data;
 };
 
@@ -103,5 +103,6 @@ export const getBoardForUser = async (boardID, userId) => {
   });
   return res.data;
 };
+
 
 
