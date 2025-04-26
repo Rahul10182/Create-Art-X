@@ -11,7 +11,7 @@ import ElementBoard from "./pages/board/ElementBoard";
 
 function App() {
   const { user } = useSelector((state) => state.auth); // Get user from Redux
-  console.log(user)
+  console.log(user);
 
   return (
     <Router>
