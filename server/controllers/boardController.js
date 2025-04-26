@@ -136,6 +136,8 @@ export const getUsersInBoard = async (req, res) => {
 export const shareBoardWithUser = async (req, res) => {
   const { boardId } = req.params;
   const { userId } = req.body;
+  console.log("boardID", boardId);
+  console.log("userId", userId);
 
   try {
     const user = await User.findById(userId);
@@ -148,6 +150,11 @@ export const shareBoardWithUser = async (req, res) => {
     if (!board.sharedWith.includes(userId)) {
       board.sharedWith.push(userId);
       await board.save();
+    }
+
+    if(!user.boards.includes(boardId)) {
+      user.boards.push(boardId);
+      await user.save();
     }
 
     res.status(200).json({ message: "Board shared successfully", board });
@@ -202,8 +209,7 @@ export const saveBoardForUser = async (req, res) => {
 
 export const getBoardForUser = async (req, res) => {
   const { boardID, userId } = req.body;
-  console.log("boardID", boardID);
-  console.log("userId", userId);
+
 
   try {
     const user = await User.findOne({ firebaseUID: userId });

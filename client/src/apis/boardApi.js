@@ -67,7 +67,8 @@ export const updateCanvasSize = async (boardID, width, height) => {
 // Share a board with a user
 export const shareBoardWithUser = async (boardId, userId) => {
   try {
-    const res = await axios.post(`${API_BASE_URL}/api/boards/${boardId}/share`, { userId });
+    console.log("Sharing board with user:", userId);
+    const res = await axios.post(`${API_BASE_URL}/boards/${boardId}/share`, { userId });
     console.log("Board shared:", res.data);
   } catch (err) {
     console.error("Error sharing board:", err);
