@@ -62,11 +62,11 @@ const DrawingBoard = () => {
       <div className="flex justify-center items-center min-h-screen px-4 py-4 relative z-10">
         <div className="text-center w-full max-w-5xl">
           <h1 className="text-4xl font-harry text-yellow-300 drop-shadow-[0_0_10px_gold] mb-6">
-            🪄 Hogwarts Drawing Scroll
+            🪄 Hogwarts Drawing
           </h1>
 
           {/* Tool Controls */}
-          <div className="mb-4 ml-52 w-full max-w-2xl bg-gradient-to-br from-[#372f26] to-[#1e1a16] border border-yellow-700 rounded-lg p-1 shadow-lg shadow-yellow-700/30">
+          <div className="mb-4 ml-52 w-full max-w-2xl bg-gradient-to-br from-[#372f26] to-[#1e1a16] border border-white rounded-2xl shadow-lg shadow-yellow-700/30">
             <ToolControls tool={tool} setTool={setTool} color={color} setColor={setColor} />
           </div>
 
