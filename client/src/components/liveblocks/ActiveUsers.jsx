@@ -1,61 +1,77 @@
-import { useEffect, useMemo, useState } from "react";
-import { useSelf, useOthers } from "@liveblocks/react";
+import { useMemo } from "react";
+import { useOthers, useSelf, useStatus } from "@liveblocks/react";
 import { Avatar } from "./Avatar";
-import { useParams } from "react-router-dom";
-import { getBoardUsers } from "../../apis/boardApi"; 
 
 const ActiveUsers = () => {
-  const [allUsers, setAllUsers] = useState([]);
-  const currentUser = useSelf();
   const others = useOthers();
-  const { id: boardID } = useParams();
+  const self = useSelf();
+  const status = useStatus();
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      if (!boardID) return;
-      const users = await getBoardUsers(boardID);
-      setAllUsers(users);
-    };
-
-    fetchUsers();
-  }, [boardID]);
-
-  const currentUserAvatarIndex = useMemo(() => {
-    return currentUser?.name
-      ? currentUser.name.length % 30
-      : Math.floor(Math.random() * 30);
-  }, [currentUser?.name]);
+  console.debug("[ActiveUsers] Status:", status);
+  console.debug("[ActiveUsers] Other users count:", others.length);
+  console.debug("[ActiveUsers] Self presence:", self?.presence);
 
   const memoizedUsers = useMemo(() => {
-    const hasMoreUsers = others.length > 2;
+    const liveUsers = self ? [self, ...others] : others;
+    const liveUsersCount = liveUsers.length;
 
     return (
-      <div className="flex items-center justify-center gap-1">
-        {currentUser && (
-          <Avatar
-            name={currentUser.name}
-            avatarIndex={currentUserAvatarIndex}
-            otherStyles="border-[3px] border-primary-green"
-          />
-        )}
+      <div className="flex items-center gap-3">
+        {/* Online count badge */}
+        <div className="bg-green-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+          {liveUsersCount} online
+        </div>
 
-        {allUsers.map((user, index) => (
-          <Avatar
-            key={user || index}
-            name={user}
-            avatarIndex={user.length % 30}
-            otherStyles="-ml-3"
-          />
-        ))}
+        {/* Avatars container */}
+        <div className="flex items-center">
+          {/* Current user (you) */}
+          {self && (
+            <div 
+              title={`You (${self.presence.name || "Me"})`}
+              className="relative z-10 hover:scale-110 transition-transform"
+            >
+              <Avatar
+                name={self.presence.name || "You"}
+                avatarIndex={self.presence.avatarIndex}
+                otherStyles="border-2 border-green-500"
+              />
+            </div>
+          )}
 
-        {hasMoreUsers && (
-          <div className="z-10 -ml-3 flex h-9 w-9 items-center justify-center rounded-full bg-primary-black text-white text-sm font-semibold">
-            +{others.length - 2}
-          </div>
-        )}
+          {/* Other connected users */}
+          {others.map((user) => (
+            <div
+              key={user.connectionId}
+              title={user.presence.name || "Anonymous"}
+              className="relative -ml-2 hover:scale-110 transition-transform"
+            >
+              <Avatar
+                name={user.presence.name}
+                avatarIndex={user.presence.avatarIndex}
+                otherStyles="border-2 border-blue-400"
+              />
+            </div>
+          ))}
+        </div>
       </div>
     );
-  }, [allUsers, currentUser, others, currentUserAvatarIndex]);
+  }, [others, self]);
+
+  if (status === "disconnected") {
+    return (
+      <div className="text-red-500 text-xs bg-red-100 px-2 py-1 rounded">
+        Disconnected
+      </div>
+    );
+  }
+
+  if (status !== "connected") {
+    return (
+      <div className="text-yellow-600 text-xs bg-yellow-100 px-2 py-1 rounded">
+        Connecting...
+      </div>
+    );
+  }
 
   return memoizedUsers;
 };
