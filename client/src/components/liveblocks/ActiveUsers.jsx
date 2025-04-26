@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSelf, useOthers } from "@liveblocks/react";
 import { Avatar } from "./Avatar";
 import { useParams } from "react-router-dom";
-import { getBoardUsers } from "../apis/boardApi"; 
+import { getBoardUsers } from "../../apis/boardApi"; 
 
 const ActiveUsers = () => {
   const [allUsers, setAllUsers] = useState([]);
