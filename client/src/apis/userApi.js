@@ -17,8 +17,7 @@ export const checkUsernameAvailability = async (username) => {
 export const getAllUsers = async () => {
   try {
     const response = await axios.get(`${API_BASE_URL}/users`);
-    console.log(response);
-    return response.data; // Return the list of users
+    return response.data.users; 
   } catch (error) {
     console.error("Error fetching users:", error.message);
     return []; 

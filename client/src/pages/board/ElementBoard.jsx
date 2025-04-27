@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -7,11 +5,12 @@ import {
   LiveblocksProvider,
   RoomProvider,
 } from "@liveblocks/react/suspense";
-import Canvas from './canvas';
+import Canvas from '../test/testing';
 import ToolControls from './ToolControls';
 import Topbar from './Topbar';
 import { updateCanvasSize } from '../../apis/boardApi';
 import hogwartsGallery from '../../assets/hogwartsGallary.jpg';
+import { UserPresence } from '../../components/liveblocks/UserPresence';
 
 const publicApiKey = import.meta.env.VITE_LIVEBLOCKS_PUBLIC_KEY;
 
@@ -29,11 +28,16 @@ const DrawingBoardContent = () => {
   
   const { boardID } = useParams();
   const { user } = useSelector((state) => state.auth);
-  const userId = user?.uid; // safer access
+  const userId = user?.uid;
+
+  console.log("[DrawingBoard] Current user:", user); // Debug
 
   const saveHistory = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      console.warn("[DrawingBoard] Canvas ref is null");
+      return;
+    }
     const dataUrl = canvas.toDataURL();
     setHistory((prev) => [...prev, dataUrl]);
     setRedoStack([]);
@@ -41,20 +45,27 @@ const DrawingBoardContent = () => {
 
   const saveCanvasToDB = async () => {
     const canvas = canvasRef.current;
-    if (!canvas || !boardID) return;
+    if (!canvas || !boardID) {
+      console.warn("[DrawingBoard] Canvas or boardID missing");
+      return;
+    }
     try {
       const res = await updateCanvasSize(boardID, canvas.width, canvas.height);
-      console.log("Saved board canvas size:", res);
+      console.log("[DrawingBoard] Saved board canvas size:", res);
     } catch (error) {
-      console.error("Failed to save board size to DB:", error);
+      console.error("[DrawingBoard] Failed to save board size:", error);
     }
   };
 
   useEffect(() => {
+    console.log("[DrawingBoard] Component mounted");
     const interval = setInterval(() => {
       saveCanvasToDB();
-    }, 60000); // auto save every 60 seconds
-    return () => clearInterval(interval);
+    }, 60000);
+    return () => {
+      console.log("[DrawingBoard] Component unmounted");
+      clearInterval(interval);
+    };
   }, [boardID]);
 
   return (
@@ -71,7 +82,6 @@ const DrawingBoardContent = () => {
             <ToolControls tool={tool} setTool={setTool} color={color} setColor={setColor} />
           </div>
 
-
           {/* Canvas Container */}
           <div className="w-3/4 h-full flex justify-center items-start overflow-hidden">
             <div className=" rounded-lg shadow-[0_0_40px_rgba(255,215,0,0.4)] bg-black/40 p-2 w-full h-[90vh] relative">
@@ -86,6 +96,7 @@ const DrawingBoardContent = () => {
                 userId={userId}
               />
             </div>
+
           </div>
         </div>
       </div>
@@ -95,14 +106,24 @@ const DrawingBoardContent = () => {
 
 const DrawingBoard = () => {
   const { boardID } = useParams();
+  console.log("[DrawingBoard] Board ID:", boardID); // Debug
 
   if (!boardID) {
+    console.error("[DrawingBoard] No boardID provided");
     return <div className="text-center text-red-500 font-bold">Invalid Board ID</div>;
   }
 
   return (
     <LiveblocksProvider publicApiKey={publicApiKey}>
-      <RoomProvider id={boardID} >
+      <RoomProvider 
+        id={boardID}
+        initialPresence={{
+          cursor:null,
+          name: "",
+          email: "",
+          avatarIndex: 0
+        }}
+      >
         <DrawingBoardContent />
       </RoomProvider>
     </LiveblocksProvider>
