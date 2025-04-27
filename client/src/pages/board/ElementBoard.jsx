@@ -62,25 +62,30 @@ const DrawingBoardContent = () => {
       className="min-h-screen bg-cover bg-center text-yellow-100 font-harry relative overflow-hidden"
       style={{ backgroundImage: `url(${hogwartsGallery})` }}
     >
-      <div className="flex justify-center items-center min-h-screen px-4 py-4 relative z-10">
-        <div className="text-center w-full max-w-5xl">
-          <Topbar title="Hogwarts Drawing" />
-          
-          <div className="mb-4 ml-52 w-full max-w-2xl bg-gradient-to-br from-[#372f26] to-[#1e1a16] border border-white rounded-2xl shadow-lg shadow-yellow-700/30">
+      <div className="flex flex-col min-h-screen px-4 py-4 relative z-10">
+        <Topbar title="Hogwarts Drawing" />
+        
+        <div className="flex flex-row w-full">
+          {/* Tool Controls */}
+          <div className="mt-2 mb-1 max-w-[300px]">
             <ToolControls tool={tool} setTool={setTool} color={color} setColor={setColor} />
           </div>
 
-          <div className="inline-block border-4 border-yellow-600 rounded-lg shadow-[0_0_40px_rgba(255,215,0,0.4)] bg-black/40 p-1 mx-auto">
-            <Canvas
-              canvasRef={canvasRef}
-              tool={tool}
-              color={color}
-              startPos={startPos}
-              setStartPos={setStartPos}
-              saveHistory={saveHistory}
-              boardID={boardID}
-              userId={userId}
-            />
+
+          {/* Canvas Container */}
+          <div className="w-3/4 h-full flex justify-center items-start overflow-hidden">
+            <div className=" rounded-lg shadow-[0_0_40px_rgba(255,215,0,0.4)] bg-black/40 p-2 w-full h-[90vh] relative">
+              <Canvas
+                canvasRef={canvasRef}
+                tool={tool}
+                color={color}
+                startPos={startPos}
+                setStartPos={setStartPos}
+                saveHistory={saveHistory}
+                boardID={boardID}
+                userId={userId}
+              />
+            </div>
           </div>
         </div>
       </div>
