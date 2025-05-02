@@ -8,6 +8,9 @@ import boardRoutes from "./routes/boardRoutes.js";
 dotenv.config();
 const app = express();        
 
+// to increase the payload limit
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 // Middleware
 app.use(cors());
 app.use(express.json());

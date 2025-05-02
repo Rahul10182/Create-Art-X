@@ -5,7 +5,7 @@ import {
   LiveblocksProvider,
   RoomProvider,
 } from "@liveblocks/react/suspense";
-import Canvas from '../test/testing';
+import Canvas from './canvas';
 import ToolControls from './ToolControls';
 import Topbar from './Topbar';
 import { updateCanvasSize } from '../../apis/boardApi';
@@ -78,12 +78,14 @@ const DrawingBoardContent = () => {
         
         <div className="flex flex-row w-full">
           {/* Tool Controls */}
-          <div className="mt-2 mb-1 max-w-[300px]">
+          <div className="mt-0 mb-0 max-w-[0px] hidden">
             <ToolControls tool={tool} setTool={setTool} color={color} setColor={setColor} />
           </div>
 
+          <UserPresence user ={user}/>
+
           {/* Canvas Container */}
-          <div className="w-3/4 h-full flex justify-center items-start overflow-hidden">
+          <div className="w-full h-full flex justify-center items-start overflow-hidden">
             <div className=" rounded-lg shadow-[0_0_40px_rgba(255,215,0,0.4)] bg-black/40 p-2 w-full h-[90vh] relative">
               <Canvas
                 canvasRef={canvasRef}

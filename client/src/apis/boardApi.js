@@ -81,6 +81,7 @@ export const saveBoardForUser = async (boardID, userId, shapes) => {
   try {
     console.log("boardID", boardID);
     console.log("userId", userId);
+    console.log("shapes", shapes);
     
     // Sending both in the body of the request
     const response = await axios.post(`${API_BASE_URL}/boards/save`, {
@@ -102,6 +103,7 @@ export const getBoardForUser = async (boardID, userId) => {
     boardID,
     userId,
   });
+  console.log("res", res);
   return res.data;
 };
 
