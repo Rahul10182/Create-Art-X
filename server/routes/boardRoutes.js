@@ -4,14 +4,16 @@ import { getBoards,createBoard ,getBoardDetails, getUsersInBoard, updateCanvasSi
 const router = express.Router();
 
 // GET /api/boards/:uid?search=abc
-router.get("/user/:uid", getBoards);
+router.post("/save", saveBoardForUser);
+router.post("/get", getBoardForUser);
 router.post("/create", createBoard); 
+
+router.get("/user/:uid", getBoards);
 router.get('/:boardID', getBoardDetails);
 router.put('/:boardID', updateBoardDetails);
 router.get("/:boardID/users", getUsersInBoard);
 router.put("/canvas/:boardID", updateCanvasSize);
 router.post('/:boardId/share', shareBoardWithUser);
-router.post("/save", saveBoardForUser);
-router.post("/get", getBoardForUser);
+
 
 export default router;    

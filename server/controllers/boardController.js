@@ -1,6 +1,7 @@
 // controllers/boardController.js
 import Board from "../models/BoardModel.js";
 import User from "../models/UserModel.js";
+import cloudinary from "../config/cloudinary.js";
 
 export const updateCanvasSize = async (req, res) => {
   const { boardID } = req.params;
@@ -164,56 +165,93 @@ export const shareBoardWithUser = async (req, res) => {
   }
 };
 // Backend API handler to save the board for a user
-export const saveBoardForUser = async (req, res) => {
-  const { boardID, userId, shapes } = req.body; // Receive shapes from the request body
 
-  console.log("Firebase UID:", userId);
-  console.log("boardId:", boardID);
+export const saveBoardForUser = async (req, res) => {
+  const { boardID, userId, shapes } = req.body;
+  // console.log("boardID", boardID);
+  // console.log("userId", userId);
+  // console.log("shapes", shapes);
 
   try {
-    // Find the board by its ID
     const board = await Board.findById(boardID);
     if (!board) {
       return res.status(404).json({ message: "Board not found" });
     }
 
-    // Find the user by their Firebase UID
     const user = await User.findOne({ firebaseUID: userId });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Add user to the board.sharedWith if not already present
     if (!board.sharedWith.some(id => id.toString() === user._id.toString())) {
       board.sharedWith.push(user._id);
-      await board.save();
     }
 
-    // Add board to the user's boards list if not already present
     if (!user.boards.some(id => id.toString() === boardID)) {
       user.boards.push(boardID);
-      await user.save();
     }
 
-    // Save the shapes to the board (assuming you want to store the drawing state in the board)
-    board.shapes = shapes; // This could be a new field that stores the shapes
-    await board.save();
+    const uploadedImages = [];
+    const filteredShapes = [];
 
-    res.status(200).json({ message: "Board associated with user and shapes saved successfully" });
+    await Promise.all(
+      shapes.map(async (shape) => {
+        if (shape.type === "image" && shape.src?.startsWith("data:image")) {
+          try {
+            const result = await cloudinary.uploader.upload(shape.src, {
+              folder: "board-images",
+              tags: [boardID, userId], // Important for search
+              context: {
+                boardID,
+                userID: userId,
+                shapeID: shape.id
+              }
+            });
+
+            uploadedImages.push({
+              id: shape.id,
+              url: result.secure_url,
+              public_id: result.public_id,
+              x: shape.x,
+              y: shape.y,
+              width: shape.width,
+              height: shape.height,
+            });
+
+            // Optionally store a reference to the cloudinary public_id in the shape
+            filteredShapes.push({
+              ...shape,
+              cloudinaryPublicId: result.public_id
+            });
+          } catch (err) {
+            console.error("Cloudinary upload failed:", err);
+          }
+        } else {
+          filteredShapes.push(shape); // Keep non-image shapes
+        }
+      })
+    );
+
+    board.shapes = filteredShapes;
+    await board.save();
+    await user.save();
+
+    res.status(200).json({
+      message: "Board saved. Images uploaded to Cloudinary.",
+      board,
+      uploadedImages,
+    });
   } catch (error) {
-    console.error("Error associating board with user:", error);
+    console.error("Error saving board:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
 
-
 export const getBoardForUser = async (req, res) => {
   const { boardID, userId } = req.body;
 
-
   try {
     const user = await User.findOne({ firebaseUID: userId });
-
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -222,17 +260,53 @@ export const getBoardForUser = async (req, res) => {
       _id: boardID,
       $or: [
         { createdBy: user._id },
-        { sharedWith: user._id } // 🔁 changed from members to sharedWith
+        { sharedWith: user._id }
       ]
     })
-      .populate('createdBy', 'name email')
-      .populate('sharedWith', 'name email'); // 🔁 changed from members to sharedWith
+    .populate('createdBy', 'name email')
+    .populate('sharedWith', 'name email');
 
     if (!board) {
       return res.status(404).json({ message: 'Board not found or access denied' });
     }
 
-    res.status(200).json(board);
+    // Fetch relevant images from Cloudinary using tags
+    const cloudinaryResult = await cloudinary.search
+      .expression(`tags:${boardID} AND tags:${userId}`)
+      .sort_by('created_at', 'desc')
+      .max_results(30)
+      .execute();
+
+    const cloudinaryImages = cloudinaryResult.resources.map(img => ({
+      public_id: img.public_id,
+      url: img.secure_url,
+      format: img.format,
+      width: img.width,
+      height: img.height,
+      created_at: img.created_at
+    }));
+
+    // Update shapes with Cloudinary URLs if match by public_id
+    const updatedShapes = board.shapes.map(shape => {
+      if (shape.type === 'image' && shape.cloudinaryPublicId) {
+        const matchingImg = cloudinaryImages.find(img => img.public_id === shape.cloudinaryPublicId);
+        if (matchingImg) {
+          return {
+            ...shape,
+            src: matchingImg.url
+          };
+        }
+      }
+      return shape;
+    });
+
+    const boardWithUpdatedShapes = {
+      ...board.toObject(),
+      shapes: updatedShapes,
+      cloudinaryImages
+    };
+
+    res.status(200).json(boardWithUpdatedShapes);
   } catch (error) {
     console.error('Error fetching board:', error);
     res.status(500).json({ message: 'Server Error' });

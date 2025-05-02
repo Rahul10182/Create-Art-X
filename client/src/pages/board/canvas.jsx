@@ -1,47 +1,88 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Stage, Layer, Rect, Circle, Line, Text, Star, Arrow, Image as KonvaImage, Group, Transformer } from 'react-konva';
 import { saveBoardForUser, getBoardForUser } from "../../apis/boardApi";
-// import useImage from 'use-image';
+import useImage from 'use-image';
+import ToolControls from './ToolControls';
 
-const Canvas = ({ tool, color, fillColor, lineWidth, fontSize, boardID, userId }) => {
+const RenderImage = ({ shape, shapes, setShapes, setSelectedId }) => {
+  const [img] = useImage(shape.src);
+  
+  return (
+    <KonvaImage
+      id={shape.id}
+      image={img}
+      x={shape.x}
+      y={shape.y}
+      width={shape.width}
+      height={shape.height}
+      draggable={shape.draggable}
+      onDragEnd={(e) => {
+        const updatedShapes = shapes.map(s => {
+          if (s.id === shape.id) {
+            return {
+              ...s,
+              x: e.target.x(),
+              y: e.target.y()
+            };
+          }
+          return s;
+        });
+        setShapes(updatedShapes);
+      }}
+      onClick={() => setSelectedId(shape.id)}
+    />
+  );
+};
+
+const Canvas = ({ boardID, userId }) => {
   const [shapes, setShapes] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [redoStack, setRedoStack] = useState([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentText, setCurrentText] = useState('');
   const [textPosition, setTextPosition] = useState(null);
+  const [tool, setTool] = useState('select');
+  const [color, setColor] = useState('#000000');
+  const [fillColor, setFillColor] = useState('#ffffff');
+  const [lineWidth, setLineWidth] = useState(3);
+  const [fontSize, setFontSize] = useState(16);
+  const [eraserSize, setEraserSize] = useState(20);
+  const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 550 });
+  
   const stageRef = useRef(null);
   const trRef = useRef(null);
   const textAreaRef = useRef(null);
   const fileInputRef = useRef(null);
 
   // Load saved shapes on component mount
-  useEffect(() => {
-    const fetchSavedShapes = async () => {
-      try {
-        const savedData = await getBoardForUser(boardID, userId);
-        if (savedData && savedData.shapes) {
-          setShapes(savedData.shapes);
-        }
-      } catch (error) {
-        console.error("Failed to load saved board", error);
+  const fetchSavedShapes = async () => {
+    try {
+      const savedData = await getBoardForUser(boardID, userId);
+      if (savedData && savedData.shapes) {
+        setCanvasSize(savedData.canvas?.size || { width: 1200, height: 700 });
+        setShapes(savedData.shapes);
       }
-    };
+    } catch (error) {
+      console.error("Failed to load saved board", error);
+    }
+  };
+
+  useEffect(() => {
     fetchSavedShapes();
   }, [boardID, userId]);
 
   // Auto-save every 2 minutes
   useEffect(() => {
     const interval = setInterval(() => {
-      saveBoardForUser(boardID, userId, shapes)
+      saveBoardForUser(boardID, userId, shapes, canvasSize)
         .then(() => console.log("Auto-saved board"))
         .catch((err) => console.error("Auto-save failed", err));
     }, 2 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [shapes, boardID, userId]);
+  }, [shapes, boardID, userId, canvasSize]);
 
-  // Handle transformer (for resizing and rotating shapes)
+  // Handle transformer and text area focus
   useEffect(() => {
     if (trRef.current && selectedId) {
       trRef.current.nodes([stageRef.current.findOne('#' + selectedId)]);
@@ -49,12 +90,28 @@ const Canvas = ({ tool, color, fillColor, lineWidth, fontSize, boardID, userId }
     }
   }, [selectedId]);
 
-  // Handle text editing
   useEffect(() => {
     if (textPosition && textAreaRef.current) {
       textAreaRef.current.focus();
     }
   }, [textPosition]);
+
+  // Clear text input when tool changes
+  useEffect(() => {
+    if (tool !== 'text') {
+      setCurrentText('');
+      setTextPosition(null);
+    }
+  }, [tool]);
+
+  const handleManualSave = async () => {
+    try {
+      await saveBoardForUser(boardID, userId, shapes, canvasSize);
+      console.log("Board saved manually.");
+    } catch (error) {
+      console.error("Manual save failed", error);
+    }
+  };
 
   const handleMouseDown = (e) => {
     if (tool === 'select') {
@@ -88,26 +145,40 @@ const Canvas = ({ tool, color, fillColor, lineWidth, fontSize, boardID, userId }
           );
         }
         
-        return node.getClientRect({
-          relativeTo: stageRef.current
-        }).x <= pos.x && 
-          node.getClientRect({
-            relativeTo: stageRef.current
-          }).y <= pos.y && 
-          node.getClientRect({
-            relativeTo: stageRef.current
-          }).x + node.getClientRect({
-            relativeTo: stageRef.current
-          }).width >= pos.x && 
-          node.getClientRect({
-            relativeTo: stageRef.current
-          }).y + node.getClientRect({
-            relativeTo: stageRef.current
-          }).height >= pos.y;
+        return node.getClientRect().x <= pos.x && 
+          node.getClientRect().y <= pos.y && 
+          node.getClientRect().x + node.getClientRect().width >= pos.x && 
+          node.getClientRect().y + node.getClientRect().height >= pos.y;
       });
       
       if (shapeToErase) {
         setShapes(shapes.filter(s => s.id !== shapeToErase.id));
+      }
+      return;
+    }
+
+    if (tool === 'fill') {
+      const pos = e.target.getStage().getPointerPosition();
+      const shapeToFill = shapes.find(shape => {
+        const node = stageRef.current.findOne('#' + shape.id);
+        if (!node) return false;
+        
+        return node.getClientRect().x <= pos.x && 
+          node.getClientRect().y <= pos.y && 
+          node.getClientRect().x + node.getClientRect().width >= pos.x && 
+          node.getClientRect().y + node.getClientRect().height >= pos.y;
+      });
+      
+      if (shapeToFill) {
+        setShapes(shapes.map(s => {
+          if (s.id === shapeToFill.id) {
+            return {
+              ...s,
+              fill: fillColor === 'transparent' ? undefined : fillColor
+            };
+          }
+          return s;
+        }));
       }
       return;
     }
@@ -144,7 +215,7 @@ const Canvas = ({ tool, color, fillColor, lineWidth, fontSize, boardID, userId }
   };
 
   const handleMouseMove = (e) => {
-    if (!isDrawing || tool === 'eraser') return;
+    if (!isDrawing || tool === 'eraser' || tool === 'fill') return;
     
     const stage = e.target.getStage();
     const point = stage.getPointerPosition();
@@ -203,13 +274,14 @@ const Canvas = ({ tool, color, fillColor, lineWidth, fontSize, boardID, userId }
 
   const handleTextKeyDown = (e) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       if (!currentText.trim()) {
         setTextPosition(null);
         return;
       }
-
+  
       const newText = {
-        id: Date.now().toString(),
+        id: selectedId || Date.now().toString(),
         type: 'text',
         x: textPosition.x,
         y: textPosition.y,
@@ -219,13 +291,22 @@ const Canvas = ({ tool, color, fillColor, lineWidth, fontSize, boardID, userId }
         fill: color,
         draggable: true,
       };
-
-      setShapes([...shapes, newText]);
+  
+      if (selectedId) {
+        setShapes(shapes.map(shape => 
+          shape.id === selectedId ? newText : shape
+        ));
+      } else {
+        setShapes([...shapes, newText]);
+      }
+      
       setCurrentText('');
       setTextPosition(null);
+      setSelectedId(null);
     } else if (e.key === 'Escape') {
       setCurrentText('');
       setTextPosition(null);
+      setSelectedId(null);
     }
   };
 
@@ -250,46 +331,12 @@ const Canvas = ({ tool, color, fillColor, lineWidth, fontSize, boardID, userId }
         width: img.width > 300 ? 300 : img.width,
         height: img.height > 200 ? 200 : img.height,
         draggable: true,
-        image: img,
       };
 
       setShapes([...shapes, newImage]);
       setSelectedId(newImage.id);
     };
     reader.readAsDataURL(file);
-  };
-
-  const handleManualSave = async () => {
-    try {
-      // Prepare all the content data to be saved
-      const contentData = {
-        rectangles,
-        circles,
-        arrows,
-        scribbles,
-        images,
-        texts,
-        size: {
-          width: width,
-          height: height
-        }
-      };
-  
-      // Update the board with the content data
-      await Board.findByIdAndUpdate(boardID, {
-        content: contentData,
-        canvas: {
-          size: {
-            width: width,
-            height: height
-          }
-        }
-      });
-  
-      console.log("Board content saved manually.");
-    } catch (error) {
-      console.error("Manual save failed", error);
-    }
   };
 
   const handleUndo = () => {
@@ -319,13 +366,12 @@ const Canvas = ({ tool, color, fillColor, lineWidth, fontSize, boardID, userId }
       quality: 1,
     });
     const link = document.createElement('a');
-    link.download = 'magical-canvas.png';
+    link.download = 'canvas-drawing.png';
     link.href = uri;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
-
 
   const renderShape = (shape) => {
     switch (shape.type) {
@@ -464,43 +510,42 @@ const Canvas = ({ tool, color, fillColor, lineWidth, fontSize, boardID, userId }
             onClick={() => setSelectedId(shape.id)}
           />
         );
-        case 'triangle':
-          return (
-            <Group
-              id={shape.id}
-              x={shape.x}
-              y={shape.y}
-              draggable={tool === 'select'}
-              onDragEnd={(e) => {
-                const updatedShapes = shapes.map(s => {
-                  if (s.id === shape.id) {
-                    return {
-                      ...s,
-                      x: e.target.x(),
-                      y: e.target.y()
-                    };
-                  }
-                  return s;
-                });
-                setShapes(updatedShapes);
-              }}
-              onClick={() => setSelectedId(shape.id)}
-            >
-              <Line
-                points={[
-                  0, -shape.radius, 
-                  shape.radius, shape.radius, 
-                  -shape.radius, shape.radius, 
-                  0, -shape.radius
-                ]}
-                stroke={shape.stroke}
-                strokeWidth={shape.strokeWidth}
-                fill={shape.fill}
-                closed
-              />
-            </Group>
-          );
-        
+      case 'triangle':
+        return (
+          <Group
+            id={shape.id}
+            x={shape.x}
+            y={shape.y}
+            draggable={tool === 'select'}
+            onDragEnd={(e) => {
+              const updatedShapes = shapes.map(s => {
+                if (s.id === shape.id) {
+                  return {
+                    ...s,
+                    x: e.target.x(),
+                    y: e.target.y()
+                  };
+                }
+                return s;
+              });
+              setShapes(updatedShapes);
+            }}
+            onClick={() => setSelectedId(shape.id)}
+          >
+            <Line
+              points={[
+                0, -shape.radius, 
+                shape.radius, shape.radius, 
+                -shape.radius, shape.radius, 
+                0, -shape.radius
+              ]}
+              stroke={shape.stroke}
+              strokeWidth={shape.strokeWidth}
+              fill={shape.fill}
+              closed
+            />
+          </Group>
+        );
       case 'star':
         return (
           <Star
@@ -538,9 +583,14 @@ const Canvas = ({ tool, color, fillColor, lineWidth, fontSize, boardID, userId }
             y={shape.y}
             text={shape.text}
             fontSize={shape.fontSize}
-            fontFamily="Times New Roman"
+            fontFamily={shape.fontFamily}
             fill={shape.fill}
             draggable={tool === 'select'}
+            onDblClick={() => {
+              setCurrentText(shape.text);
+              setTextPosition({ x: shape.x, y: shape.y });
+              setSelectedId(shape.id);
+            }}
             onDragEnd={(e) => {
               const updatedShapes = shapes.map(s => {
                 if (s.id === shape.id) {
@@ -554,172 +604,189 @@ const Canvas = ({ tool, color, fillColor, lineWidth, fontSize, boardID, userId }
               });
               setShapes(updatedShapes);
             }}
-            onClick={() => setSelectedId(shape.id)}
+            onClick={(e) => {
+              e.cancelBubble = true;
+              setSelectedId(shape.id);
+            }}
           />
         );
       case 'image':
         return (
-            <KonvaImage
-              id={shape.id}
-              image={shape.image}
-              x={shape.x}
-              y={shape.y}
-              width={shape.width}
-              height={shape.height}
-              draggable={true}
-              onDragEnd={(e) => {
-                const updatedShapes = shapes.map(s => {
-                  if (s.id === shape.id) {
-                    return {
-                      ...s,
-                      x: e.target.x(),
-                      y: e.target.y()
-                    };
-                  }
-                  return s;
-                });
-                setShapes(updatedShapes);
-              }}
-              onClick={() => setSelectedId(shape.id)}
-            />
-          );
+          <RenderImage
+            key={shape.id}
+            shape={shape}
+            shapes={shapes}
+            setShapes={setShapes}
+            setSelectedId={setSelectedId}
+          />
+        );
       default:
         return null;
     }
   };
 
   return (
-    <div className="bg-[#1a1614] p-2 rounded-xl shadow-[0_0_30px_rgba(255,215,0,0.2)] border border-gold">
-      <div className="flex justify-center gap-2 mb-1">
-        {/* Save Scroll Button */}
-        <button 
-          className="bg-emerald-700 hover:bg-emerald-600 text-white px-2 py-1 text-sm rounded-lg w-20 cursor-pointer 
-          font-harry border border-gold shadow-md transition-all hover:shadow-gold/50"
-          onClick={handleManualSave}
-        >
-          Save
-        </button>
-
-        {/* Time Turner Button */}
-        <button 
-          className="bg-amber-700 hover:bg-amber-600 text-white px-2 py-1 text-sm rounded-lg w-20 cursor-pointer 
-          font-harry border border-gold shadow-md transition-all hover:shadow-gold/50"
-          onClick={handleUndo}
-        >
-          Undo
-        </button>
-
-        {/* Redo Spell Button */}
-        <button 
-          className="bg-blue-700 hover:bg-blue-600 text-white px-2 py-1 text-sm rounded-lg w-20 cursor-pointer 
-          font-harry border border-gold shadow-md transition-all hover:shadow-gold/50"
-          onClick={handleRedo}
-        >
-          Redo
-        </button>
-
-        {/* Capture Mirror Button */}
-        <button 
-          className="bg-purple-700 hover:bg-purple-600 text-white px-2 py-1 text-sm rounded-lg w-20 cursor-pointer 
-          font-harry border border-gold shadow-md transition-all hover:shadow-gold/50"
-          onClick={handleDownload}
-        >
-          Capture
-        </button>
-
-        {/* Evanesco Button */}
-        <button 
-          className="bg-red-700 hover:bg-red-600 text-white px-2 py-1 text-sm rounded-lg w-20 cursor-pointer 
-          font-harry border border-gold shadow-md transition-all hover:shadow-gold/50"
-          onClick={handleClear}
-        >
-          Clear
-        </button>
-
-        {/* Portkey Button */}
-        <button 
-          className="bg-sky-700 hover:bg-sky-600 text-white px-2 py-1 text-sm rounded-lg w-20 cursor-pointer 
-          font-harry border border-gold shadow-md transition-all hover:shadow-gold/50"
-          onClick={() => fileInputRef.current.click()}
-        >
-          Portkey
-        </button>
-        
-        {/* Hidden File Input */}
-        <input 
-          ref={fileInputRef}
-          type="file" 
-          accept="image/*" 
-          onChange={handleImageUpload} 
-          className="hidden" 
+    <div className="flex h-screen bg-[#1a1614]">
+      {/* Sidebar */}
+      <div className="w-80 flex-shrink-0">
+        <ToolControls
+          tool={tool}
+          setTool={setTool}
+          color={color}
+          setColor={setColor}
+          fillColor={fillColor}
+          setFillColor={setFillColor}
+          lineWidth={lineWidth}
+          setLineWidth={setLineWidth}
+          fontSize={fontSize}
+          setFontSize={setFontSize}
+          eraserSize={eraserSize}
+          setEraserSize={setEraserSize}
+          selectedId={selectedId}
+          shapes={shapes}
+          setShapes={setShapes}
+          handleUndo={handleUndo}
+          handleRedo={handleRedo}
+          handleClear={handleClear}
+          handleDownload={handleDownload}
+          handleManualSave={handleManualSave}
+          handleImageUpload={handleImageUpload}
+          fileInputRef={fileInputRef}
         />
       </div>
 
-      <div className="relative">
-        {/* Stage for Canvas */}
-        <Stage
-          ref={stageRef}
-          width={1000}
-          height={600}
-          className="border-4 border-gold rounded-lg shadow-xl bg-white"
-          onMouseDown={handleMouseDown}
-          onMousemove={handleMouseMove}
-          onMouseup={handleMouseUp}
-        >
-          <Layer>
-            {shapes.map(shape => (
-              <React.Fragment key={shape.id}>
-                {renderShape(shape)}
-              </React.Fragment>
-            ))}
-            {selectedId && tool === 'select' && (
-              <Transformer
-                ref={trRef}
-                boundBoxFunc={(oldBox, newBox) => {
-                  if (newBox.width < 5 || newBox.height < 5) {
-                    return oldBox;
-                  }
-                  return newBox;
-                }}
-                rotateEnabled={true}
-                enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
-              />
-            )}
-          </Layer>
-        </Stage>
-
-        {/* Textbox Positioning */}
-        {textPosition && (
-          <div
+      {/* Canvas Area */}
+      <div className="flex-1 w-6xl p-4 overflow-auto">
+        <div className="relative">
+          <Stage
+            ref={stageRef}
+            width={canvasSize.width}
+            height={canvasSize.height}
             style={{
-              position: 'absolute',
-              left: `${textPosition.x + 10}px`,
-              top: `${textPosition.y + 10}px`,
-              padding: '4px',
-              background: 'white',
-              border: '1px solid black',
-              zIndex: 100,
+              display: 'block',
+              width: '100%',
+              height: '100%'
             }}
+            className="border-4 border-gold rounded-lg shadow-xl bg-white"
+            onMouseDown={handleMouseDown}
+            onMousemove={handleMouseMove}
+            onMouseup={handleMouseUp}
           >
-            <textarea
-              ref={textAreaRef}
-              value={currentText}
-              onChange={(e) => setCurrentText(e.target.value)}
-              onKeyDown={handleTextKeyDown}
+            <Layer>
+              {shapes.map(shape => (
+                <React.Fragment key={shape.id}>
+                  {renderShape(shape)}
+                </React.Fragment>
+              ))}
+              {selectedId && tool === 'select' && (
+                <Transformer
+                  ref={trRef}
+                  boundBoxFunc={(oldBox, newBox) => {
+                    if (newBox.width < 5 || newBox.height < 5) {
+                      return oldBox;
+                    }
+                    return newBox;
+                  }}
+                  rotateEnabled={true}
+                  enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
+                  onTransformEnd={(e) => {
+                    const node = e.target;
+                    const scaleX = node.scaleX();
+                    const scaleY = node.scaleY();
+                    
+                    node.scaleX(1);
+                    node.scaleY(1);
+                    
+                    setShapes(shapes.map(shape => {
+                      if (shape.id === selectedId) {
+                        if (shape.type === 'image') {
+                          return {
+                            ...shape,
+                            x: node.x(),
+                            y: node.y(),
+                            width: Math.max(5, shape.width * scaleX),
+                            height: Math.max(5, shape.height * scaleY),
+                            rotation: node.rotation()
+                          };
+                        } else if (shape.type === 'text') {
+                          return {
+                            ...shape,
+                            x: node.x(),
+                            y: node.y(),
+                            fontSize: Math.max(8, shape.fontSize * ((scaleX + scaleY) / 2)),
+                            rotation: node.rotation()
+                          };
+                        } else {
+                          return {
+                            ...shape,
+                            x: node.x(),
+                            y: node.y(),
+                            width: shape.width * scaleX,
+                            height: shape.height * scaleY,
+                            radius: shape.radius * ((scaleX + scaleY) / 2),
+                            outerRadius: shape.outerRadius * ((scaleX + scaleY) / 2),
+                            innerRadius: shape.innerRadius * ((scaleX + scaleY) / 2),
+                            rotation: node.rotation()
+                          };
+                        }
+                      }
+                      return shape;
+                    }));
+                  }}
+                />
+              )}
+            </Layer>
+          </Stage>
+
+          {textPosition && (
+            <div
               style={{
-                fontSize: `${fontSize}px`,
-                fontFamily: 'Times New Roman',
-                color: color,
-                outline: 'none',
-                resize: 'none',
+                position: 'absolute',
+                left: `${textPosition.x + (stageRef.current?.container().offsetLeft || 0)}px`,
+                top: `${textPosition.y + (stageRef.current?.container().offsetTop || 0)}px`,
+                zIndex: 100,
               }}
-            />
-          </div>
-        )}
+            >
+              <div
+                style={{
+                  padding: '4px',
+                  background: 'white',
+                  border: '2px solid #d4af37',
+                  borderRadius: '4px',
+                  boxShadow: '0 0 10px rgba(212, 175, 55, 0.5)'
+                }}
+              >
+                <textarea
+                  ref={textAreaRef}
+                  value={currentText}
+                  onChange={(e) => setCurrentText(e.target.value)}
+                  onKeyDown={handleTextKeyDown}
+                  onBlur={() => {
+                    if (currentText.trim()) {
+                      handleTextKeyDown({ key: 'Enter' });
+                    } else {
+                      setTextPosition(null);
+                    }
+                  }}
+                  style={{
+                    fontSize: `${fontSize}px`,
+                    fontFamily: 'Times New Roman',
+                    color: color,
+                    outline: 'none',
+                    resize: 'none',
+                    width: '200px',
+                    minHeight: '50px',
+                    border: '1px solid #ccc',
+                    padding: '4px'
+                  }}
+                  autoFocus
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
-
-
   );
 };
 
