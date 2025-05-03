@@ -18,7 +18,6 @@ const tools = [
   { value: 'text', icon: <Type />, title: 'Writing Charm' },
   { value: 'eraser', icon: <Eraser />, title: 'Vanishing Spell' },
   { value: 'fill', icon: <PaintBucket />, title: 'Color Changing Potion' },
-  { value: 'image', icon: <Image />, title: 'Moving Portrait' },
 ];
 
 const ToolControls = ({ 
