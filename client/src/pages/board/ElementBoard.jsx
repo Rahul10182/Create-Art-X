@@ -5,7 +5,7 @@ import {
   LiveblocksProvider,
   RoomProvider,
 } from "@liveblocks/react/suspense";
-import Canvas from './canvas';
+import Canvas from './Canvas';
 import ToolControls from './ToolControls';
 import Topbar from './Topbar';
 import { updateCanvasSize } from '../../apis/boardApi';
@@ -20,17 +20,42 @@ if (!publicApiKey) {
 
 const DrawingBoardContent = () => {
   const canvasRef = useRef(null);
+  const containerRef = useRef(null);
   const [tool, setTool] = useState('pencil');
   const [color, setColor] = useState('#000000');
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [history, setHistory] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   
   const { boardID } = useParams();
   const { user } = useSelector((state) => state.auth);
   const userId = user?.uid;
 
-  console.log("[DrawingBoard] Current user:", user); // Debug
+  // Handle window resize and initial sizing
+  useEffect(() => {
+    const updateCanvasDimensions = () => {
+      if (containerRef.current) {
+        const container = containerRef.current;
+        const width = container.offsetWidth;
+        const height = container.offsetHeight;
+        setCanvasSize({ width, height });
+        
+        // Update canvas ref if needed
+        if (canvasRef.current) {
+          canvasRef.current.width = width;
+          canvasRef.current.height = height;
+        }
+      }
+    };
+
+    updateCanvasDimensions();
+    window.addEventListener('resize', updateCanvasDimensions);
+    
+    return () => {
+      window.removeEventListener('resize', updateCanvasDimensions);
+    };
+  }, []);
 
   const saveHistory = useCallback(() => {
     const canvas = canvasRef.current;
@@ -44,13 +69,9 @@ const DrawingBoardContent = () => {
   }, []);
 
   const saveCanvasToDB = async () => {
-    const canvas = canvasRef.current;
-    if (!canvas || !boardID) {
-      console.warn("[DrawingBoard] Canvas or boardID missing");
-      return;
-    }
     try {
-      const res = await updateCanvasSize(boardID, canvas.width, canvas.height);
+      if (!boardID || !canvasSize.width || !canvasSize.height) return;
+      const res = await updateCanvasSize(boardID, canvasSize.width, canvasSize.height);
       console.log("[DrawingBoard] Saved board canvas size:", res);
     } catch (error) {
       console.error("[DrawingBoard] Failed to save board size:", error);
@@ -58,15 +79,11 @@ const DrawingBoardContent = () => {
   };
 
   useEffect(() => {
-    console.log("[DrawingBoard] Component mounted");
     const interval = setInterval(() => {
       saveCanvasToDB();
     }, 60000);
-    return () => {
-      console.log("[DrawingBoard] Component unmounted");
-      clearInterval(interval);
-    };
-  }, [boardID]);
+    return () => clearInterval(interval);
+  }, [boardID, canvasSize]);
 
   return (
     <div
@@ -77,16 +94,20 @@ const DrawingBoardContent = () => {
         <Topbar title="Hogwarts Drawing" />
         
         <div className="flex flex-row w-full">
-          {/* Tool Controls */}
+          {/* Tool Controls - hidden but kept for potential future use */}
           <div className="mt-0 mb-0 max-w-[0px] hidden">
             <ToolControls tool={tool} setTool={setTool} color={color} setColor={setColor} />
           </div>
 
-          <UserPresence user ={user}/>
+          <UserPresence user={user}/>
 
           {/* Canvas Container */}
-          <div className="w-full h-full flex justify-center items-start overflow-hidden">
-            <div className=" rounded-lg shadow-[0_0_40px_rgba(255,215,0,0.4)] bg-black/40 p-2 w-full h-[90vh] relative">
+          <div 
+            ref={containerRef}
+            className="w-full h-full flex justify-center items-start"
+            style={{ height: 'calc(100vh - 100px)' }} // Adjust based on your Topbar height
+          >
+            <div className="rounded-lg p-2 w-full h-full">
               <Canvas
                 canvasRef={canvasRef}
                 tool={tool}
@@ -96,9 +117,10 @@ const DrawingBoardContent = () => {
                 saveHistory={saveHistory}
                 boardID={boardID}
                 userId={userId}
+                width={canvasSize.width}
+                height={canvasSize.height}
               />
             </div>
-
           </div>
         </div>
       </div>

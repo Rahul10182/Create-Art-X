@@ -23,3 +23,7 @@ export const getAllUsers = async () => {
     return []; 
   }
 }
+export const updateUserProfile = async (firebaseUID, updates) => {
+  const res = await axios.put(`${API_BASE_URL}/users/${firebaseUID}`, updates);
+  return res.data;
+};

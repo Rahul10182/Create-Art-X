@@ -47,19 +47,38 @@ const Canvas = ({ boardID, userId }) => {
   const [lineWidth, setLineWidth] = useState(3);
   const [fontSize, setFontSize] = useState(16);
   const [eraserSize, setEraserSize] = useState(20);
-  const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 550 });
+  const [canvasSize, setCanvasSize] = useState({ width: window.innerWidth - 320, height: window.innerHeight - 40 });
   
   const stageRef = useRef(null);
   const trRef = useRef(null);
   const textAreaRef = useRef(null);
   const fileInputRef = useRef(null);
+  const containerRef = useRef(null);
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current) {
+        const width = containerRef.current.offsetWidth;
+        const height = containerRef.current.offsetHeight;
+        setCanvasSize({
+          width: width,
+          height: height
+        });
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Load saved shapes on component mount
   const fetchSavedShapes = async () => {
     try {
       const savedData = await getBoardForUser(boardID, userId);
       if (savedData && savedData.shapes) {
-        setCanvasSize(savedData.canvas?.size || { width: 1200, height: 700 });
+        setCanvasSize(savedData.canvas?.size || { width: window.innerWidth - 320, height: window.innerHeight - 40 });
         setShapes(savedData.shapes);
       }
     } catch (error) {
@@ -575,41 +594,35 @@ const Canvas = ({ boardID, userId }) => {
             onClick={() => setSelectedId(shape.id)}
           />
         );
-      case 'text':
-        return (
-          <Text
-            id={shape.id}
-            x={shape.x}
-            y={shape.y}
-            text={shape.text}
-            fontSize={shape.fontSize}
-            fontFamily={shape.fontFamily}
-            fill={shape.fill}
-            draggable={tool === 'select'}
-            onDblClick={() => {
-              setCurrentText(shape.text);
-              setTextPosition({ x: shape.x, y: shape.y });
-              setSelectedId(shape.id);
-            }}
-            onDragEnd={(e) => {
-              const updatedShapes = shapes.map(s => {
-                if (s.id === shape.id) {
-                  return {
-                    ...s,
-                    x: e.target.x(),
-                    y: e.target.y()
-                  };
-                }
-                return s;
-              });
-              setShapes(updatedShapes);
-            }}
-            onClick={(e) => {
-              e.cancelBubble = true;
-              setSelectedId(shape.id);
-            }}
-          />
-        );
+        case 'text':
+          return (
+            <Text
+              id={shape.id}
+              x={shape.x}
+              y={shape.y}
+              text={shape.text}
+              fontSize={shape.fontSize}
+              fontFamily={shape.fontFamily}
+              fill={shape.fill}
+              draggable={tool === 'select'}
+              onDblClick={(e) => {
+                // Prevent event bubbling to stage
+                e.cancelBubble = true;
+                onClick({
+                  type: 'textEdit',
+                  id: shape.id,
+                  text: shape.text,
+                  x: shape.x,
+                  y: shape.y
+                });
+              }}
+              onDragEnd={onDragEnd}
+              onClick={(e) => {
+                e.cancelBubble = true;
+                onClick({ type: 'select', id: shape.id });
+              }}
+            />
+          );
       case 'image':
         return (
           <RenderImage
@@ -626,38 +639,19 @@ const Canvas = ({ boardID, userId }) => {
   };
 
   return (
-    <div className="flex h-screen bg-[#1a1614]">
-      {/* Sidebar */}
-      <div className="w-80 flex-shrink-0">
-        <ToolControls
-          tool={tool}
-          setTool={setTool}
-          color={color}
-          setColor={setColor}
-          fillColor={fillColor}
-          setFillColor={setFillColor}
-          lineWidth={lineWidth}
-          setLineWidth={setLineWidth}
-          fontSize={fontSize}
-          setFontSize={setFontSize}
-          eraserSize={eraserSize}
-          setEraserSize={setEraserSize}
-          selectedId={selectedId}
-          shapes={shapes}
-          setShapes={setShapes}
-          handleUndo={handleUndo}
-          handleRedo={handleRedo}
-          handleClear={handleClear}
-          handleDownload={handleDownload}
-          handleManualSave={handleManualSave}
-          handleImageUpload={handleImageUpload}
-          fileInputRef={fileInputRef}
-        />
-      </div>
+    <div className="flex h-screen]">
+
 
       {/* Canvas Area */}
-      <div className="flex-1 w-6xl p-4 overflow-auto">
-        <div className="relative">
+      <div 
+        ref={containerRef}
+        className="flex-1 pt-2 pb-2"
+        style={{
+          height: 'calc(100vh - 1rem)',
+          overflow: 'hidden'
+        }}
+      >
+        <div className="relative w-full h-full">
           <Stage
             ref={stageRef}
             width={canvasSize.width}
@@ -665,12 +659,12 @@ const Canvas = ({ boardID, userId }) => {
             style={{
               display: 'block',
               width: '100%',
-              height: '100%'
+              height: '88%'
             }}
             className="border-4 border-gold rounded-lg shadow-xl bg-white"
             onMouseDown={handleMouseDown}
-            onMousemove={handleMouseMove}
-            onMouseup={handleMouseUp}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
           >
             <Layer>
               {shapes.map(shape => (
@@ -739,52 +733,80 @@ const Canvas = ({ boardID, userId }) => {
           </Stage>
 
           {textPosition && (
-            <div
-              style={{
-                position: 'absolute',
-                left: `${textPosition.x + (stageRef.current?.container().offsetLeft || 0)}px`,
-                top: `${textPosition.y + (stageRef.current?.container().offsetTop || 0)}px`,
-                zIndex: 100,
-              }}
-            >
-              <div
-                style={{
-                  padding: '4px',
-                  background: 'white',
-                  border: '2px solid #d4af37',
-                  borderRadius: '4px',
-                  boxShadow: '0 0 10px rgba(212, 175, 55, 0.5)'
-                }}
-              >
-                <textarea
-                  ref={textAreaRef}
-                  value={currentText}
-                  onChange={(e) => setCurrentText(e.target.value)}
-                  onKeyDown={handleTextKeyDown}
-                  onBlur={() => {
-                    if (currentText.trim()) {
-                      handleTextKeyDown({ key: 'Enter' });
-                    } else {
-                      setTextPosition(null);
-                    }
-                  }}
-                  style={{
-                    fontSize: `${fontSize}px`,
-                    fontFamily: 'Times New Roman',
-                    color: color,
-                    outline: 'none',
-                    resize: 'none',
-                    width: '200px',
-                    minHeight: '50px',
-                    border: '1px solid #ccc',
-                    padding: '4px'
-                  }}
-                  autoFocus
-                />
-              </div>
-            </div>
-          )}
+  <div
+    style={{
+      position: 'absolute',
+      left: `${textPosition.x + (stageRef.current?.container().offsetLeft || 0)}px`,
+      top: `${textPosition.y + (stageRef.current?.container().offsetTop || 0)}px`,
+      zIndex: 100,
+    }}
+  >
+    <div
+      style={{
+        padding: '4px',
+        background: 'white',
+        border: '2px solid #d4af37',
+        borderRadius: '4px',
+        boxShadow: '0 0 10px rgba(212, 175, 55, 0.5)'
+      }}
+    >
+      <textarea
+        ref={textAreaRef}
+        value={currentText}
+        onChange={(e) => setCurrentText(e.target.value)}
+        onKeyDown={handleTextKeyDown}
+        onBlur={() => {
+          if (currentText.trim()) {
+            handleTextKeyDown({ key: 'Enter', preventDefault: () => {} });
+          } else {
+            setTextPosition(null);
+          }
+        }}
+        style={{
+          fontSize: `${fontSize}px`,
+          fontFamily: 'Times New Roman',
+          color: color,
+          outline: 'none',
+          resize: 'none',
+          width: '200px',
+          minHeight: '50px',
+          border: '1px solid #ccc',
+          padding: '4px'
+        }}
+        autoFocus
+      />
+    </div>
+  </div>
+)}
         </div>
+      </div>
+
+            {/* Sidebar */}
+            <div className="w-80 flex-shrink-0 pt-4 ml-4 pr-4">
+        <ToolControls
+          tool={tool}
+          setTool={setTool}
+          color={color}
+          setColor={setColor}
+          fillColor={fillColor}
+          setFillColor={setFillColor}
+          lineWidth={lineWidth}
+          setLineWidth={setLineWidth}
+          fontSize={fontSize}
+          setFontSize={setFontSize}
+          eraserSize={eraserSize}
+          setEraserSize={setEraserSize}
+          selectedId={selectedId}
+          shapes={shapes}
+          setShapes={setShapes}
+          handleUndo={handleUndo}
+          handleRedo={handleRedo}
+          handleClear={handleClear}
+          handleDownload={handleDownload}
+          handleManualSave={handleManualSave}
+          handleImageUpload={handleImageUpload}
+          fileInputRef={fileInputRef}
+        />
       </div>
     </div>
   );
