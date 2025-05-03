@@ -1,34 +1,65 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect, useRef } from 'react';
+import { Stage, Layer, Rect, Circle, Line, Text, Star, Arrow, Image as KonvaImage, Group, Transformer } from 'react-konva';
 import { saveBoardForUser, getBoardForUser } from "../../apis/boardApi";
+import useImage from 'use-image';
+import ToolControls from './ToolControls';
 
-const Canvas = ({ tool, color, fillColor, boardID, userId }) => {
-  const canvasRef = useRef(null);
+const RenderImage = ({ shape, shapes, setShapes, setSelectedId }) => {
+  const [img] = useImage(shape.src);
+  
+  return (
+    <KonvaImage
+      id={shape.id}
+      image={img}
+      x={shape.x}
+      y={shape.y}
+      width={shape.width}
+      height={shape.height}
+      draggable={shape.draggable}
+      onDragEnd={(e) => {
+        const updatedShapes = shapes.map(s => {
+          if (s.id === shape.id) {
+            return {
+              ...s,
+              x: e.target.x(),
+              y: e.target.y()
+            };
+          }
+          return s;
+        });
+        setShapes(updatedShapes);
+      }}
+      onClick={() => setSelectedId(shape.id)}
+    />
+  );
+};
+
+const Canvas = ({ boardID, userId }) => {
+  const [shapes, setShapes] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [redoStack, setRedoStack] = useState([]);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [currentText, setCurrentText] = useState('');
+  const [textPosition, setTextPosition] = useState(null);
+  const [tool, setTool] = useState('select');
+  const [color, setColor] = useState('#000000');
+  const [fillColor, setFillColor] = useState('#ffffff');
+  const [lineWidth, setLineWidth] = useState(3);
+  const [fontSize, setFontSize] = useState(16);
+  const [eraserSize, setEraserSize] = useState(20);
+  const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 550 });
+  
+  const stageRef = useRef(null);
+  const trRef = useRef(null);
+  const textAreaRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const [drawing, setDrawing] = useState(false);
-  const [startPos, setStartPos] = useState(null);
-  const [shapes, setShapes] = useState([]);
-  const [redoStack, setRedoStack] = useState([]);
-  const [currentShape, setCurrentShape] = useState(null);
-
-  const getMousePos = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-  };
-
-  const handleManualSave = async () => {
-    try {
-      await saveBoardForUser(boardID, userId, shapes);
-      console.log("Board saved manually.");
-    } catch (error) {
-      console.error("Manual save failed", error);
-    }
-  };
-
+  // Load saved shapes on component mount
   const fetchSavedShapes = async () => {
     try {
       const savedData = await getBoardForUser(boardID, userId);
       if (savedData && savedData.shapes) {
+        setCanvasSize(savedData.canvas?.size || { width: 1200, height: 700 });
         setShapes(savedData.shapes);
       }
     } catch (error) {
@@ -40,216 +71,272 @@ const Canvas = ({ tool, color, fillColor, boardID, userId }) => {
     fetchSavedShapes();
   }, [boardID, userId]);
 
+  // Auto-save every 2 minutes
   useEffect(() => {
     const interval = setInterval(() => {
-      saveBoardForUser(boardID, userId, shapes)
+      saveBoardForUser(boardID, userId, shapes, canvasSize)
         .then(() => console.log("Auto-saved board"))
         .catch((err) => console.error("Auto-save failed", err));
     }, 2 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [shapes]);
+  }, [shapes, boardID, userId, canvasSize]);
+
+  // Handle transformer and text area focus
+  useEffect(() => {
+    if (trRef.current && selectedId) {
+      trRef.current.nodes([stageRef.current.findOne('#' + selectedId)]);
+      trRef.current.getLayer().batchDraw();
+    }
+  }, [selectedId]);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (textPosition && textAreaRef.current) {
+      textAreaRef.current.focus();
+    }
+  }, [textPosition]);
 
-    const drawShape = (shape) => {
-      const fill = shape.fillColor && shape.fillColor !== "transparent" ? shape.fillColor : null;
-      ctx.lineWidth = 2;
+  // Clear text input when tool changes
+  useEffect(() => {
+    if (tool !== 'text') {
+      setCurrentText('');
+      setTextPosition(null);
+    }
+  }, [tool]);
 
-      switch (shape.type) {
-        case "rectangle":
-          if (fill) {
-            ctx.fillStyle = fill;
-            ctx.fillRect(shape.startX, shape.startY, shape.width, shape.height);
-          }
-          ctx.strokeStyle = shape.color;
-          ctx.strokeRect(shape.startX, shape.startY, shape.width, shape.height);
-          break;
-
-        case "circle":
-          ctx.beginPath();
-          ctx.arc(shape.startX, shape.startY, shape.radius, 0, 2 * Math.PI);
-          if (fill) {
-            ctx.fillStyle = fill;
-            ctx.fill();
-          }
-          ctx.strokeStyle = shape.color;
-          ctx.stroke();
-          break;
-
-        case "line":
-          ctx.beginPath();
-          ctx.moveTo(shape.start.x, shape.start.y);
-          ctx.lineTo(shape.end.x, shape.end.y);
-          ctx.strokeStyle = shape.color;
-          ctx.stroke();
-          break;
-
-        case "pen":
-          ctx.beginPath();
-          ctx.moveTo(shape.points[0].x, shape.points[0].y);
-          shape.points.forEach((point) => ctx.lineTo(point.x, point.y));
-          ctx.strokeStyle = shape.color;
-          ctx.stroke();
-          break;
-
-        case "triangle":
-          ctx.beginPath();
-          ctx.moveTo(shape.startX, shape.startY);
-          ctx.lineTo(shape.endX, shape.endY);
-          ctx.lineTo(2 * shape.startX - shape.endX, shape.endY);
-          ctx.closePath();
-          if (fill) {
-            ctx.fillStyle = fill;
-            ctx.fill();
-          }
-          ctx.strokeStyle = shape.color;
-          ctx.stroke();
-          break;
-
-        case "star":
-          const drawStar = (cx, cy, spikes, outerRadius, innerRadius) => {
-            let rot = Math.PI / 2 * 3;
-            let x = cx;
-            let y = cy;
-            const step = Math.PI / spikes;
-
-            ctx.beginPath();
-            ctx.moveTo(cx, cy - outerRadius);
-            for (let i = 0; i < spikes; i++) {
-              x = cx + Math.cos(rot) * outerRadius;
-              y = cy + Math.sin(rot) * outerRadius;
-              ctx.lineTo(x, y);
-              rot += step;
-
-              x = cx + Math.cos(rot) * innerRadius;
-              y = cy + Math.sin(rot) * innerRadius;
-              ctx.lineTo(x, y);
-              rot += step;
-            }
-            ctx.lineTo(cx, cy - outerRadius);
-            ctx.closePath();
-            if (fill) {
-              ctx.fillStyle = fill;
-              ctx.fill();
-            }
-            ctx.strokeStyle = shape.color;
-            ctx.stroke();
-          };
-          drawStar(shape.cx, shape.cy, 5, shape.outerRadius, shape.innerRadius);
-          break;
-
-        case "arrow":
-          const headLength = 10;
-          const dx = shape.end.x - shape.start.x;
-          const dy = shape.end.y - shape.start.y;
-          const angle = Math.atan2(dy, dx);
-
-          ctx.beginPath();
-          ctx.moveTo(shape.start.x, shape.start.y);
-          ctx.lineTo(shape.end.x, shape.end.y);
-          ctx.strokeStyle = shape.color;
-          ctx.stroke();
-
-          ctx.beginPath();
-          ctx.moveTo(shape.end.x, shape.end.y);
-          ctx.lineTo(
-            shape.end.x - headLength * Math.cos(angle - Math.PI / 6),
-            shape.end.y - headLength * Math.sin(angle - Math.PI / 6)
-          );
-          ctx.lineTo(
-            shape.end.x - headLength * Math.cos(angle + Math.PI / 6),
-            shape.end.y - headLength * Math.sin(angle + Math.PI / 6)
-          );
-          ctx.lineTo(shape.end.x, shape.end.y);
-          ctx.closePath();
-          if (fill) {
-            ctx.fillStyle = fill;
-            ctx.fill();
-          }
-          ctx.stroke();
-          break;
-
-        case "image":
-          const img = new Image();
-          img.onload = () => {
-            ctx.drawImage(img, shape.x, shape.y, shape.width, shape.height);
-          };
-          img.src = shape.src;
-          break;
-
-        default:
-          break;
-      }
-    };
-
-    shapes.forEach(drawShape);
-    if (currentShape) drawShape(currentShape);
-  }, [shapes, currentShape]);
-
-  const handleMouseDown = (e) => {
-    const pos = getMousePos(e);
-    setDrawing(true);
-    setStartPos(pos);
-    setRedoStack([]);
-
-    if (tool === "pen") {
-      setCurrentShape({ type: "pen", points: [pos], color });
+  const handleManualSave = async () => {
+    try {
+      await saveBoardForUser(boardID, userId, shapes, canvasSize);
+      console.log("Board saved manually.");
+    } catch (error) {
+      console.error("Manual save failed", error);
     }
   };
 
-  const handleMouseMove = (e) => {
-    if (!drawing) return;
-    const pos = getMousePos(e);
-    const canvas = canvasRef.current;
-    if (pos.x < 0 || pos.y < 0 || pos.x > canvas.width || pos.y > canvas.height) return;
-
-    if (tool === "eraser") {
-      const ctx = canvas.getContext("2d");
-      const eraseSize = 20;
-      ctx.clearRect(pos.x - eraseSize / 2, pos.y - eraseSize / 2, eraseSize, eraseSize);
+  const handleMouseDown = (e) => {
+    if (tool === 'select') {
+      const clickedOnEmpty = e.target === e.target.getStage();
+      if (clickedOnEmpty) {
+        setSelectedId(null);
+      } else {
+        setSelectedId(e.target.id());
+      }
       return;
     }
 
+    if (tool === 'text') {
+      const pos = e.target.getStage().getPointerPosition();
+      setTextPosition(pos);
+      return;
+    }
+
+    if (tool === 'eraser') {
+      const pos = e.target.getStage().getPointerPosition();
+      const shapeToErase = shapes.find(shape => {
+        const node = stageRef.current.findOne('#' + shape.id);
+        if (!node) return false;
+        
+        if (shape.type === 'image') {
+          return (
+            pos.x >= node.x() && 
+            pos.x <= node.x() + node.width() && 
+            pos.y >= node.y() && 
+            pos.y <= node.y() + node.height()
+          );
+        }
+        
+        return node.getClientRect().x <= pos.x && 
+          node.getClientRect().y <= pos.y && 
+          node.getClientRect().x + node.getClientRect().width >= pos.x && 
+          node.getClientRect().y + node.getClientRect().height >= pos.y;
+      });
+      
+      if (shapeToErase) {
+        setShapes(shapes.filter(s => s.id !== shapeToErase.id));
+      }
+      return;
+    }
+
+    if (tool === 'fill') {
+      const pos = e.target.getStage().getPointerPosition();
+      const shapeToFill = shapes.find(shape => {
+        const node = stageRef.current.findOne('#' + shape.id);
+        if (!node) return false;
+        
+        return node.getClientRect().x <= pos.x && 
+          node.getClientRect().y <= pos.y && 
+          node.getClientRect().x + node.getClientRect().width >= pos.x && 
+          node.getClientRect().y + node.getClientRect().height >= pos.y;
+      });
+      
+      if (shapeToFill) {
+        setShapes(shapes.map(s => {
+          if (s.id === shapeToFill.id) {
+            return {
+              ...s,
+              fill: fillColor === 'transparent' ? undefined : fillColor
+            };
+          }
+          return s;
+        }));
+      }
+      return;
+    }
+
+    setIsDrawing(true);
+    const pos = e.target.getStage().getPointerPosition();
+    const newShape = {
+      id: Date.now().toString(),
+      type: tool,
+      x: pos.x,
+      y: pos.y,
+      width: 0,
+      height: 0,
+      radius: 0,
+      points: [pos.x, pos.y, pos.x, pos.y],
+      stroke: color,
+      strokeWidth: lineWidth,
+      fill: fillColor === 'transparent' ? undefined : fillColor,
+      fontSize: fontSize,
+      rotation: 0,
+      outerRadius: 0,
+      innerRadius: 0,
+    };
+
+    if (tool === 'star') {
+      newShape.outerRadius = 0;
+      newShape.innerRadius = 0;
+      newShape.numPoints = 5;
+    }
+
+    setShapes([...shapes, newShape]);
+    setSelectedId(newShape.id);
+    setRedoStack([]);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDrawing || tool === 'eraser' || tool === 'fill') return;
+    
+    const stage = e.target.getStage();
+    const point = stage.getPointerPosition();
+    const lastShape = shapes[shapes.length - 1];
+    
+    if (!lastShape) return;
+
+    if (tool === 'pen') {
+      const newPoints = [...lastShape.points, point.x, point.y];
+      const updatedShape = { ...lastShape, points: newPoints };
+      const newShapes = [...shapes];
+      newShapes[newShapes.length - 1] = updatedShape;
+      setShapes(newShapes);
+      return;
+    }
+
+    const updatedShape = { ...lastShape };
+    
     switch (tool) {
-      case "pen":
-        setCurrentShape((prev) => ({ ...prev, points: [...prev.points, pos] }));
+      case 'rectangle':
+        updatedShape.width = point.x - lastShape.x;
+        updatedShape.height = point.y - lastShape.y;
         break;
-      case "rectangle":
-        setCurrentShape({ type: "rectangle", startX: startPos.x, startY: startPos.y, width: pos.x - startPos.x, height: pos.y - startPos.y, color, fillColor });
+      case 'circle':
+      case 'triangle':
+        const radius = Math.sqrt(
+          Math.pow(point.x - lastShape.x, 2) + 
+          Math.pow(point.y - lastShape.y, 2)
+        );
+        updatedShape.radius = radius;
         break;
-      case "circle":
-        const radius = Math.sqrt((pos.x - startPos.x) ** 2 + (pos.y - startPos.y) ** 2);
-        setCurrentShape({ type: "circle", startX: startPos.x, startY: startPos.y, radius, color, fillColor });
+      case 'line':
+      case 'arrow':
+        updatedShape.points = [lastShape.x, lastShape.y, point.x, point.y];
         break;
-      case "line":
-        setCurrentShape({ type: "line", start: startPos, end: pos, color });
-        break;
-      case "triangle":
-        setCurrentShape({ type: "triangle", startX: startPos.x, startY: startPos.y, endX: pos.x, endY: pos.y, color, fillColor });
-        break;
-      case "star":
-        const outerRadius = Math.sqrt((pos.x - startPos.x) ** 2 + (pos.y - startPos.y) ** 2);
-        setCurrentShape({ type: "star", cx: startPos.x, cy: startPos.y, outerRadius, innerRadius: outerRadius / 2.5, color, fillColor });
-        break;
-      case "arrow":
-        setCurrentShape({ type: "arrow", start: startPos, end: pos, color, fillColor });
+      case 'star':
+        const outerRadius = Math.sqrt(
+          Math.pow(point.x - lastShape.x, 2) + 
+          Math.pow(point.y - lastShape.y, 2)
+        );
+        updatedShape.outerRadius = outerRadius;
+        updatedShape.innerRadius = outerRadius / 2;
         break;
       default:
         break;
     }
+
+    const newShapes = [...shapes];
+    newShapes[newShapes.length - 1] = updatedShape;
+    setShapes(newShapes);
   };
 
   const handleMouseUp = () => {
-    if (!drawing) return;
-    setDrawing(false);
-    if (currentShape) {
-      setShapes((prev) => [...prev, currentShape]);
-      setCurrentShape(null);
+    setIsDrawing(false);
+  };
+
+  const handleTextKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!currentText.trim()) {
+        setTextPosition(null);
+        return;
+      }
+  
+      const newText = {
+        id: selectedId || Date.now().toString(),
+        type: 'text',
+        x: textPosition.x,
+        y: textPosition.y,
+        text: currentText,
+        fontSize: fontSize,
+        fontFamily: 'Times New Roman',
+        fill: color,
+        draggable: true,
+      };
+  
+      if (selectedId) {
+        setShapes(shapes.map(shape => 
+          shape.id === selectedId ? newText : shape
+        ));
+      } else {
+        setShapes([...shapes, newText]);
+      }
+      
+      setCurrentText('');
+      setTextPosition(null);
+      setSelectedId(null);
+    } else if (e.key === 'Escape') {
+      setCurrentText('');
+      setTextPosition(null);
+      setSelectedId(null);
     }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const img = new window.Image();
+      img.src = event.target.result;
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
+
+      const newImage = {
+        id: Date.now().toString(),
+        type: 'image',
+        src: event.target.result,
+        x: 100,
+        y: 100,
+        width: img.width > 300 ? 300 : img.width,
+        height: img.height > 200 ? 200 : img.height,
+        draggable: true,
+      };
+
+      setShapes([...shapes, newImage]);
+      setSelectedId(newImage.id);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleUndo = () => {
@@ -257,69 +344,448 @@ const Canvas = ({ tool, color, fillColor, boardID, userId }) => {
     const newShapes = [...shapes];
     const popped = newShapes.pop();
     setShapes(newShapes);
-    setRedoStack((prev) => [...prev, popped]);
+    setRedoStack([...redoStack, popped]);
   };
 
   const handleRedo = () => {
     if (redoStack.length === 0) return;
-    const shape = redoStack.pop();
-    setShapes((prev) => [...prev, shape]);
-    setRedoStack([...redoStack]);
+    const shape = redoStack[redoStack.length - 1];
+    setShapes([...shapes, shape]);
+    setRedoStack(redoStack.slice(0, -1));
+  };
+
+  const handleClear = () => {
+    setShapes([]);
+    setRedoStack([]);
+    setSelectedId(null);
   };
 
   const handleDownload = () => {
-    const link = document.createElement("a");
-    link.download = "canvas.png";
-    link.href = canvasRef.current.toDataURL();
+    const uri = stageRef.current.toDataURL({
+      mimeType: 'image/png',
+      quality: 1,
+    });
+    const link = document.createElement('a');
+    link.download = 'canvas-drawing.png';
+    link.href = uri;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
   };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const shape = {
-          type: "image",
-          src: reader.result,
-          x: 100,
-          y: 100,
-          width: 200,
-          height: 150
-        };
-        setShapes((prev) => [...prev, shape]);
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
+  const renderShape = (shape) => {
+    switch (shape.type) {
+      case 'rectangle':
+        return (
+          <Rect
+            id={shape.id}
+            x={shape.x}
+            y={shape.y}
+            width={shape.width}
+            height={shape.height}
+            stroke={shape.stroke}
+            strokeWidth={shape.strokeWidth}
+            fill={shape.fill}
+            draggable={tool === 'select'}
+            onDragEnd={(e) => {
+              const updatedShapes = shapes.map(s => {
+                if (s.id === shape.id) {
+                  return {
+                    ...s,
+                    x: e.target.x(),
+                    y: e.target.y()
+                  };
+                }
+                return s;
+              });
+              setShapes(updatedShapes);
+            }}
+            onClick={() => setSelectedId(shape.id)}
+          />
+        );
+      case 'circle':
+        return (
+          <Circle
+            id={shape.id}
+            x={shape.x}
+            y={shape.y}
+            radius={shape.radius}
+            stroke={shape.stroke}
+            strokeWidth={shape.strokeWidth}
+            fill={shape.fill}
+            draggable={tool === 'select'}
+            onDragEnd={(e) => {
+              const updatedShapes = shapes.map(s => {
+                if (s.id === shape.id) {
+                  return {
+                    ...s,
+                    x: e.target.x(),
+                    y: e.target.y()
+                  };
+                }
+                return s;
+              });
+              setShapes(updatedShapes);
+            }}
+            onClick={() => setSelectedId(shape.id)}
+          />
+        );
+      case 'line':
+      case 'arrow':
+        return (
+          <Group>
+            <Line
+              id={shape.id}
+              points={shape.points}
+              stroke={shape.stroke}
+              strokeWidth={shape.strokeWidth}
+              lineCap="round"
+              lineJoin="round"
+              draggable={tool === 'select'}
+              onDragEnd={(e) => {
+                const updatedShapes = shapes.map(s => {
+                  if (s.id === shape.id) {
+                    const dx = e.target.x() - shape.x;
+                    const dy = e.target.y() - shape.y;
+                    return {
+                      ...s,
+                      x: e.target.x(),
+                      y: e.target.y(),
+                      points: [
+                        shape.points[0] + dx,
+                        shape.points[1] + dy,
+                        shape.points[2] + dx,
+                        shape.points[3] + dy
+                      ]
+                    };
+                  }
+                  return s;
+                });
+                setShapes(updatedShapes);
+              }}
+              onClick={() => setSelectedId(shape.id)}
+            />
+            {shape.type === 'arrow' && (
+              <Arrow
+                points={shape.points}
+                stroke={shape.stroke}
+                strokeWidth={shape.strokeWidth}
+                fill={shape.stroke}
+                pointerLength={10}
+                pointerWidth={10}
+              />
+            )}
+          </Group>
+        );
+      case 'pen':
+        return (
+          <Line
+            id={shape.id}
+            points={shape.points}
+            stroke={shape.stroke}
+            strokeWidth={shape.strokeWidth}
+            lineCap="round"
+            lineJoin="round"
+            tension={0.1}
+            draggable={tool === 'select'}
+            onDragEnd={(e) => {
+              const updatedShapes = shapes.map(s => {
+                if (s.id === shape.id) {
+                  const dx = e.target.x() - shape.x;
+                  const dy = e.target.y() - shape.y;
+                  const newPoints = shape.points.map((point, i) => {
+                    return i % 2 === 0 ? point + dx : point + dy;
+                  });
+                  return {
+                    ...s,
+                    x: e.target.x(),
+                    y: e.target.y(),
+                    points: newPoints
+                  };
+                }
+                return s;
+              });
+              setShapes(updatedShapes);
+            }}
+            onClick={() => setSelectedId(shape.id)}
+          />
+        );
+      case 'triangle':
+        return (
+          <Group
+            id={shape.id}
+            x={shape.x}
+            y={shape.y}
+            draggable={tool === 'select'}
+            onDragEnd={(e) => {
+              const updatedShapes = shapes.map(s => {
+                if (s.id === shape.id) {
+                  return {
+                    ...s,
+                    x: e.target.x(),
+                    y: e.target.y()
+                  };
+                }
+                return s;
+              });
+              setShapes(updatedShapes);
+            }}
+            onClick={() => setSelectedId(shape.id)}
+          >
+            <Line
+              points={[
+                0, -shape.radius, 
+                shape.radius, shape.radius, 
+                -shape.radius, shape.radius, 
+                0, -shape.radius
+              ]}
+              stroke={shape.stroke}
+              strokeWidth={shape.strokeWidth}
+              fill={shape.fill}
+              closed
+            />
+          </Group>
+        );
+      case 'star':
+        return (
+          <Star
+            id={shape.id}
+            x={shape.x}
+            y={shape.y}
+            numPoints={5}
+            outerRadius={shape.outerRadius}
+            innerRadius={shape.innerRadius}
+            stroke={shape.stroke}
+            strokeWidth={shape.strokeWidth}
+            fill={shape.fill}
+            draggable={tool === 'select'}
+            onDragEnd={(e) => {
+              const updatedShapes = shapes.map(s => {
+                if (s.id === shape.id) {
+                  return {
+                    ...s,
+                    x: e.target.x(),
+                    y: e.target.y()
+                  };
+                }
+                return s;
+              });
+              setShapes(updatedShapes);
+            }}
+            onClick={() => setSelectedId(shape.id)}
+          />
+        );
+      case 'text':
+        return (
+          <Text
+            id={shape.id}
+            x={shape.x}
+            y={shape.y}
+            text={shape.text}
+            fontSize={shape.fontSize}
+            fontFamily={shape.fontFamily}
+            fill={shape.fill}
+            draggable={tool === 'select'}
+            onDblClick={() => {
+              setCurrentText(shape.text);
+              setTextPosition({ x: shape.x, y: shape.y });
+              setSelectedId(shape.id);
+            }}
+            onDragEnd={(e) => {
+              const updatedShapes = shapes.map(s => {
+                if (s.id === shape.id) {
+                  return {
+                    ...s,
+                    x: e.target.x(),
+                    y: e.target.y()
+                  };
+                }
+                return s;
+              });
+              setShapes(updatedShapes);
+            }}
+            onClick={(e) => {
+              e.cancelBubble = true;
+              setSelectedId(shape.id);
+            }}
+          />
+        );
+      case 'image':
+        return (
+          <RenderImage
+            key={shape.id}
+            shape={shape}
+            shapes={shapes}
+            setShapes={setShapes}
+            setSelectedId={setSelectedId}
+          />
+        );
+      default:
+        return null;
+    }
   };
 
   return (
-    <div>
-      <div className="flex justify-center gap-4 mb-4">
-        <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={handleManualSave}>Save</button>
-        <button className="bg-yellow-500 text-white px-4 py-2 rounded" onClick={handleUndo}>Undo</button>
-        <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={handleRedo}>Redo</button>
-        <button className="bg-purple-500 text-white px-4 py-2 rounded" onClick={handleDownload}>Download</button>
-        <button className="bg-pink-500 text-white px-4 py-2 rounded" onClick={() => fileInputRef.current.click()}>Upload Image</button>
-        <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} className="hidden" />
+    <div className="flex h-screen bg-[#1a1614]">
+      {/* Sidebar */}
+      <div className="w-80 flex-shrink-0">
+        <ToolControls
+          tool={tool}
+          setTool={setTool}
+          color={color}
+          setColor={setColor}
+          fillColor={fillColor}
+          setFillColor={setFillColor}
+          lineWidth={lineWidth}
+          setLineWidth={setLineWidth}
+          fontSize={fontSize}
+          setFontSize={setFontSize}
+          eraserSize={eraserSize}
+          setEraserSize={setEraserSize}
+          selectedId={selectedId}
+          shapes={shapes}
+          setShapes={setShapes}
+          handleUndo={handleUndo}
+          handleRedo={handleRedo}
+          handleClear={handleClear}
+          handleDownload={handleDownload}
+          handleManualSave={handleManualSave}
+          handleImageUpload={handleImageUpload}
+          fileInputRef={fileInputRef}
+        />
       </div>
 
-      <canvas
-        ref={canvasRef}
-        width={1000}
-        height={600}
-        className="border-4 border-purple-300 bg-white rounded-lg shadow-xl"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={() => {
-          setDrawing(false);
-          setCurrentShape(null);
-        }}
-      />
+      {/* Canvas Area */}
+      <div className="flex-1 w-6xl p-4 overflow-auto">
+        <div className="relative">
+          <Stage
+            ref={stageRef}
+            width={canvasSize.width}
+            height={canvasSize.height}
+            style={{
+              display: 'block',
+              width: '100%',
+              height: '100%'
+            }}
+            className="border-4 border-gold rounded-lg shadow-xl bg-white"
+            onMouseDown={handleMouseDown}
+            onMousemove={handleMouseMove}
+            onMouseup={handleMouseUp}
+          >
+            <Layer>
+              {shapes.map(shape => (
+                <React.Fragment key={shape.id}>
+                  {renderShape(shape)}
+                </React.Fragment>
+              ))}
+              {selectedId && tool === 'select' && (
+                <Transformer
+                  ref={trRef}
+                  boundBoxFunc={(oldBox, newBox) => {
+                    if (newBox.width < 5 || newBox.height < 5) {
+                      return oldBox;
+                    }
+                    return newBox;
+                  }}
+                  rotateEnabled={true}
+                  enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
+                  onTransformEnd={(e) => {
+                    const node = e.target;
+                    const scaleX = node.scaleX();
+                    const scaleY = node.scaleY();
+                    
+                    node.scaleX(1);
+                    node.scaleY(1);
+                    
+                    setShapes(shapes.map(shape => {
+                      if (shape.id === selectedId) {
+                        if (shape.type === 'image') {
+                          return {
+                            ...shape,
+                            x: node.x(),
+                            y: node.y(),
+                            width: Math.max(5, shape.width * scaleX),
+                            height: Math.max(5, shape.height * scaleY),
+                            rotation: node.rotation()
+                          };
+                        } else if (shape.type === 'text') {
+                          return {
+                            ...shape,
+                            x: node.x(),
+                            y: node.y(),
+                            fontSize: Math.max(8, shape.fontSize * ((scaleX + scaleY) / 2)),
+                            rotation: node.rotation()
+                          };
+                        } else {
+                          return {
+                            ...shape,
+                            x: node.x(),
+                            y: node.y(),
+                            width: shape.width * scaleX,
+                            height: shape.height * scaleY,
+                            radius: shape.radius * ((scaleX + scaleY) / 2),
+                            outerRadius: shape.outerRadius * ((scaleX + scaleY) / 2),
+                            innerRadius: shape.innerRadius * ((scaleX + scaleY) / 2),
+                            rotation: node.rotation()
+                          };
+                        }
+                      }
+                      return shape;
+                    }));
+                  }}
+                />
+              )}
+            </Layer>
+          </Stage>
+
+          {textPosition && (
+            <div
+              style={{
+                position: 'absolute',
+                left: `${textPosition.x + (stageRef.current?.container().offsetLeft || 0)}px`,
+                top: `${textPosition.y + (stageRef.current?.container().offsetTop || 0)}px`,
+                zIndex: 100,
+              }}
+            >
+              <div
+                style={{
+                  padding: '4px',
+                  background: 'white',
+                  border: '2px solid #d4af37',
+                  borderRadius: '4px',
+                  boxShadow: '0 0 10px rgba(212, 175, 55, 0.5)'
+                }}
+              >
+                <textarea
+                  ref={textAreaRef}
+                  value={currentText}
+                  onChange={(e) => setCurrentText(e.target.value)}
+                  onKeyDown={handleTextKeyDown}
+                  onBlur={() => {
+                    if (currentText.trim()) {
+                      handleTextKeyDown({ key: 'Enter' });
+                    } else {
+                      setTextPosition(null);
+                    }
+                  }}
+                  style={{
+                    fontSize: `${fontSize}px`,
+                    fontFamily: 'Times New Roman',
+                    color: color,
+                    outline: 'none',
+                    resize: 'none',
+                    width: '200px',
+                    minHeight: '50px',
+                    border: '1px solid #ccc',
+                    padding: '4px'
+                  }}
+                  autoFocus
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
