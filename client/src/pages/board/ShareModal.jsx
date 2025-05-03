@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import { shareBoardWithUser } from "../../apis/boardApi";
 import { getAllUsers } from "../../apis/userApi";
 import { IoClose, IoCheckmark } from "react-icons/io5";
-import { toast } from "react-hot-toast"; // using react-hot-toast
+import { toast } from "react-hot-toast";
 
 const ShareModal = ({ closeModal, sharedWith = [] }) => {
   const { boardID } = useParams();
@@ -20,6 +20,7 @@ const ShareModal = ({ closeModal, sharedWith = [] }) => {
       setLoading(true);
       try {
         const users = await getAllUsers();
+        console.log(users);
         const userArray = Array.isArray(users) ? users : users.data || [];
         const filteredUsers = userArray.filter(user => user.firebaseUID !== currentUser.uid);
         setAllUsers(filteredUsers);
@@ -54,8 +55,8 @@ const ShareModal = ({ closeModal, sharedWith = [] }) => {
         shareBoardWithUser(boardID, userId),
         {
           loading: 'Sharing board...',
-          success: 'Board shared successfully 🎯!',
-          error: 'Failed to share board ❌',
+          success: 'Board shared successfully! ✨',
+          error: 'Failed to share board',
         }
       );
       closeModal();
@@ -65,51 +66,51 @@ const ShareModal = ({ closeModal, sharedWith = [] }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
-      <div className="bg-white rounded-2xl p-6 w-[450px] max-h-[90vh] overflow-y-auto relative shadow-2xl">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm">
+      <div className="bg-gradient-to-br from-[#1e1a16] to-[#372f26] rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative border-2 border-yellow-600 shadow-[0_0_20px_rgba(210,180,40,0.5)]">
         <button
           onClick={closeModal}
-          className="absolute top-3 right-3 text-2xl text-gray-600 hover:text-red-600"
+          className="absolute top-3 right-3 text-2xl text-yellow-400 hover:text-yellow-200 transition-colors"
         >
           <IoClose />
         </button>
 
-        <h2 className="text-3xl font-bold mb-4 text-center text-indigo-700">Share Board</h2>
+        <h2 className="text-2xl font-harry text-yellow-300 mb-4 text-center">Share This Board</h2>
 
         <div className="flex mb-6">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search users..."
-            className="flex-1 border border-gray-300 rounded-l-lg px-4 py-2 focus:outline-none"
+            placeholder="Search wizards..."
+            className="flex-1 bg-gray-800 text-white border border-yellow-600 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500 placeholder-gray-400"
           />
-          <div className="bg-indigo-500 text-white px-4 py-2 rounded-r-lg flex items-center">
-            {loading ? "Loading..." : "🔍"}
+          <div className="bg-yellow-600 text-black px-4 py-2 rounded-r-lg flex items-center font-semibold">
+            {loading ? "🔮 Searching..." : "🔍"}
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {matches.length > 0 ? (
             matches.map((user) => (
               <div
                 key={user._id}
-                className="flex justify-between items-center border p-2 rounded-lg shadow hover:shadow-lg transition"
+                className="flex justify-between items-center bg-black/30 p-3 rounded-lg border border-yellow-600/50 hover:bg-black/40 transition-colors"
               >
                 <div className="flex flex-col">
-                  <span className="font-semibold text-gray-800">{user.name}</span>
-                  <span className="text-sm text-gray-600">@{user.username}</span>
-                  <span className="text-sm text-gray-400">{user.email}</span>
+                  <span className="font-semibold text-yellow-300">{user.name || user.username}</span>
+                  <span className="text-sm text-gray-300">@{user.username}</span>
+                  <span className="text-xs text-gray-400">{user.email}</span>
                 </div>
 
                 {alreadyShared(user._id) ? (
-                  <div className="text-green-500 text-2xl">
+                  <div className="text-green-400 text-2xl">
                     <IoCheckmark />
                   </div>
                 ) : (
                   <button
                     onClick={() => handleShare(user._id)}
-                    className="text-sm bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+                    className="text-sm bg-yellow-600 hover:bg-yellow-700 text-black font-semibold px-3 py-1 rounded transition-colors"
                   >
                     Share
                   </button>
@@ -117,10 +118,14 @@ const ShareModal = ({ closeModal, sharedWith = [] }) => {
               </div>
             ))
           ) : query.trim() !== "" ? (
-            <div className="text-center text-gray-500">
-              No users found for "<b>{query}</b>".
+            <div className="text-center text-yellow-300 italic">
+              No wizards found for "<span className="font-bold">{query}</span>"
             </div>
-          ) : null}
+          ) : (
+            <div className="text-center text-yellow-300 italic">
+              Search for wizards to share with...
+            </div>
+          )}
         </div>
       </div>
     </div>

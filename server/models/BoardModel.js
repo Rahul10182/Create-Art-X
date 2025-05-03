@@ -12,7 +12,11 @@ const boardSchema = new mongoose.Schema({
     }
   },
   sharedWith: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-  shapes: { type: Array, default: [] },   
+  shapes: { type: Array, default: [] }, 
+  messages: [{ 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: "Message" 
+  }]  
 });
 
 
