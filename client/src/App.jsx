@@ -29,7 +29,7 @@ function App() {
 
         {/* Fallback route */}
         <Route path="*" element={<Navigate to={user ? "/dashboard" : "/login"} replace />} />
-        <Route path="/test" element={<TestPage/>} />
+        <Route path="/test/:boardID" element={<TestPage/>} />
       </Routes>
     </Router>
   );
