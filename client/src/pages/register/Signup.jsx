@@ -1,32 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
+  Box,
+  Paper,
   TextField,
   Button,
   Typography,
-  Paper,
   Divider,
-  Box,
   IconButton,
   InputAdornment,
 } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Visibility,
-  VisibilityOff,
-  Google as GoogleIcon,
-  Facebook as FacebookIcon,
-} from "@mui/icons-material";
-import { createUserWithEmailAndPassword ,GoogleAuthProvider, signInWithPopup} from "firebase/auth";
-import { auth } from "../../firebase/config"; // Ensure this file exists
-import { signupUser } from "../../apis/authApi"; // API call to backend
-import Lottie from "lottie-react";
-import backgroundAnimation from "../../assets/animations/background-animation.json";
-import { Typewriter } from "react-simple-typewriter";
-import { useDispatch } from "react-redux"; // ✅ Import Redux Dispatch
-import { loginSuccess } from "../../redux/authSlice"; // ✅ Import Redux Action
-import { useEffect } from "react";
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+} from "firebase/auth";
+import { auth, googleProvider } from "../../firebase/config";
+import { signupUser } from "../../apis/authApi";
+import { useDispatch } from "react-redux";
+import { loginSuccess } from "../../redux/authSlice";
 import { checkUsernameAvailability } from "../../apis/userApi";
 import debounce from "lodash.debounce";
+import { Typewriter } from "react-simple-typewriter";
+import GoogleIcon from "@mui/icons-material/Google";
+import FacebookIcon from "@mui/icons-material/Facebook";
+import loginBg from "../../assets/login_background_image.avif";
+import Lottie from "lottie-react";
+import magicLottie from "../../assets/animations/login-animation.json";
 
 const SignupPage = () => {
   const [input, setInput] = useState({
@@ -38,15 +38,51 @@ const SignupPage = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [usernameStatus, setUsernameStatus] = useState(null); // null, true, or false
+  const [usernameStatus, setUsernameStatus] = useState(null);
   const [suggestedUsernames, setSuggestedUsernames] = useState([]);
+  const [error, setError] = useState("");
+  const [step, setStep] = useState("splash");
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    const splashTimeout = setTimeout(() => setStep("signup"), 7000);
+    return () => clearTimeout(splashTimeout);
+  }, []);
+
+  useEffect(() => {
+    if (input.username.trim() === "") {
+      setUsernameStatus(null);
+      setSuggestedUsernames([]);
+      return;
+    }
+
+    const debouncedCheck = debounce(async () => {
+      const isAvailable = await checkUsernameAvailability(input.username);
+      setUsernameStatus(isAvailable);
+
+      if (!isAvailable) {
+        const suggestions = Array.from({ length: 3 }, () => {
+          return `${input.username}${Math.floor(Math.random() * 1000)}`;
+        });
+        setSuggestedUsernames(suggestions);
+      } else {
+        setSuggestedUsernames([]);
+      }
+    }, 500);
+
+    debouncedCheck();
+    return () => debouncedCheck.cancel();
+  }, [input.username]);
+
+  const handleChange = (e) => {
+    setInput({ ...input, [e.target.name]: e.target.value });
+  };
 
   const handleSignup = async (e) => {
     e.preventDefault();
     if (input.password !== input.confirmPassword) {
-      alert("Passwords do not match");
+      setError("The spells don't match!");
       return;
     }
 
@@ -67,227 +103,293 @@ const SignupPage = () => {
 
       dispatch(
         loginSuccess({
-        uid: firebaseUser.uid,
-        name: input.name,
-        email: input.email,
-        username: input.username,          
+          uid: firebaseUser.uid,
+          name: input.name,
+          email: input.email,
+          username: input.username,
         })
       );
 
       navigate("/dashboard");
     } catch (error) {
-      console.error("Signup error:", error.message);
-      alert("Signup failed. Please try again.");
+      setError("Something went wrong with your magic. Try again.");
     }
   };
 
-  useEffect(() => {
-      if (input.username.trim() === "") {
-        setUsernameStatus(null);
-        setSuggestedUsernames([]);
-        return;
-      }
-    
-      const debouncedCheck = debounce(async () => {
-        const isAvailable = await checkUsernameAvailability(input.username);
-        setUsernameStatus(isAvailable);
-    
-        if (!isAvailable) {
-          const suggestions = Array.from(
-            { length: 3 },
-            () => `${input.username}${Math.floor(Math.random() * 1000)}`
-          );
-          setSuggestedUsernames(suggestions);
-        } else {
-          setSuggestedUsernames([]);
-        }
-      }, 500);
-    
-      debouncedCheck();
-      return () => debouncedCheck.cancel();
-    }, [input.username]);
+  const handleGoogleSignup = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const googleUser = result.user;
+      const email = googleUser.email;
+      const username = email.substring(0, email.indexOf("@"));
 
-  
-    const handleGoogleSignup = async () => {
-        const provider = new GoogleAuthProvider();
-        try {
-          const result = await signInWithPopup(auth, provider);
-          const user = result.user;
-      
-          // Extract username from email
-          const email = user.email;
-          const username = email.substring(0, email.indexOf('@'));
-      
-          // Save user data to your backend
-          await signupUser({
-            firebaseUID: user.uid,
-            name: user.displayName,
-            email: email,
-            username: username,
-          });
-      
-          // Dispatch login success
-          dispatch(
-            loginSuccess({
-              uid: user.uid,
-              name: user.displayName,
-              email: email,
-              username: username,
-            })
-          );
-      
-          // Navigate to home/dashboard
-          navigate("/dashboard");
-      
-        } catch (error) {
-          console.error("Google Sign-in error:", error.message);
-          alert("Failed to sign in with Google. Please try again.");
-        }
-      };      
+      await signupUser({
+        firebaseUID: googleUser.uid,
+        name: googleUser.displayName,
+        email: email,
+        username: username,
+      });
 
+      dispatch(
+        loginSuccess({
+          uid: googleUser.uid,
+          name: googleUser.displayName,
+          email: email,
+          username: username,
+        })
+      );
 
+      navigate("/dashboard");
+    } catch (err) {
+      setError("Google signup failed. Please try again.");
+    }
+  };
+
+  // SPLASH SCREEN
+  if (step === "splash") {
+    return (
+      <Box
+        sx={{
+          height: "100vh",
+          width: "100vw",
+          backgroundImage: `url(${loginBg})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#f9d342",
+          textShadow: "0 0 10px #f9d342, 0 0 20px #6E1EFF",
+          fontFamily: "'Harry P', serif",
+          fontSize: "2rem",
+        }}
+      >
+        <Typewriter
+          words={[
+            "Preparing your magical journey...",
+            "The sorting hat awaits...",
+            "Your wizarding story begins...",
+          ]}
+          loop={0}
+          cursor
+          cursorStyle="|"
+          typeSpeed={50}
+          deleteSpeed={40}
+          delaySpeed={2000}
+        />
+      </Box>
+    );
+  }
+
+  // SIGNUP SCREEN
   return (
     <Box
       sx={{
         display: "flex",
         height: "100vh",
-        alignItems: "center",
-        justifyContent: "center",
-        position: "relative",
-        overflow: "hidden",
-        margin: 0,
-        padding: 0,
+        backgroundColor: "#0f0c29",
+        color: "#ffffff",
       }}
     >
+      {/* LEFT: Lottie + Message */}
       <Box
         sx={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          zIndex: -1,
+          flex: 1,
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
-        <Lottie animationData={backgroundAnimation} loop autoPlay />
+        <Box
+          sx={{
+            position: "absolute",
+            top: "20%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 2,
+            textAlign: "center",
+            color: "#f9d342",
+            textShadow: "0 0 10px #f9d342, 0 0 20px #6E1EFF",
+            fontFamily: "'Harry P', serif",
+            fontSize: "2rem",
+            px: 3,
+            width: "100%",
+          }}
+        >
+          <Typewriter
+            words={["Join the Wizarding World!"]}
+            loop={0}
+            cursor
+            cursorStyle="|"
+            typeSpeed={50}
+            deleteSpeed={40}
+            delaySpeed={2000}
+          />
+        </Box>
+        <Lottie
+          animationData={magicLottie}
+          loop
+          autoplay
+          style={{
+            width: "100%",
+            height: "100%",
+            position: "absolute",
+            top: 0,
+            left: 0,
+            zIndex: 1,
+          }}
+        />
       </Box>
 
-      <Typography
-        variant="h4"
+      {/* RIGHT: Signup Form */}
+      <Box
         sx={{
-          position: "absolute",
-          top: "5%",
-          left: "10%",
-          fontWeight: "bold",
-          color: "#ffffff",
-          textShadow: "0px 0px 10px rgba(255, 255, 255, 0.8)",
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          px: 4,
         }}
       >
-        <Typewriter
-          words={["Hello there! Sign Up Now"]}
-          loop={true}
-          cursor
-          cursorStyle="|"
-          typeSpeed={50}
-          deleteSpeed={30}
-        />
-      </Typography>
-
-      <Paper
-        elevation={10}
-        sx={{
-          width: "500px",
-          padding: "2rem",
-          background: "rgba(255, 255, 255, 0.1)",
-          backdropFilter: "blur(10px)",
-          borderRadius: "20px",
-          boxShadow: "0px 4px 30px rgba(110, 30, 255, 0.5)",
-          border: "1px solid rgba(255, 255, 255, 0.2)",
-          textAlign: "center",
-          marginLeft: "10%",
-          marginTop: "0%",
-        }}
-      >
-        <Typography
-          variant="h5"
-          sx={{ mb: 1, fontWeight: "bold", color: "#ffffff" }}
+        <Box
+          sx={{
+            width: "100%",
+            maxWidth: 400,
+            p: 4,
+            backgroundColor: "#1c1b29",
+            borderRadius: "12px",
+            boxShadow: "0 0 20px rgba(255, 255, 255, 0.1)",
+          }}
         >
-          Create Your Account
-        </Typography>
-
-        <form onSubmit={handleSignup} style={{ width: "100%" }}>
-          <TextField
-            fullWidth
-            label="Name"
-            variant="outlined"
-            margin="normal"
-            value={input.name}
-            onChange={(e) => setInput({ ...input, name: e.target.value })}
-            required
-            sx={inputStyles}
-          />
-
-          <TextField
-            fullWidth
-            label="Username"
-            variant="outlined"
-            margin="normal"
-            value={input.username}
-            onChange={(e) => setInput({ ...input, username: e.target.value })}
-            required
-            sx={inputStyles}
-            helperText={
-            usernameStatus === null
-                ? ""
-                : usernameStatus
-                ? "✅ Username available"
-                : "❌ Username taken"
-            }
-            FormHelperTextProps={{
-            style: { color: usernameStatus ? "lightgreen" : "red" },
+          <Typography
+            variant="h4"
+            sx={{
+              fontFamily: "'Harry P', serif",
+              color: "#f9d342",
+              textAlign: "center",
+              mb: 2,
             }}
-        />
-        {usernameStatus === false && suggestedUsernames.length > 0 && (
-        <Box sx={{ textAlign: "left", mt: 1 }}>
-            <Typography variant="body2" sx={{ color: "#ccc" }}>
-            Try:
+          >
+            Hogwarts Enrollment
+          </Typography>
+
+          {error && (
+            <Typography color="error" sx={{ mb: 2, textAlign: "center" }}>
+              {error}
             </Typography>
-            {suggestedUsernames.map((s, idx) => (
-            <Button
-                key={idx}
-                variant="text"
-                sx={{ textTransform: "none", color: "#6E1EFF" }}
-                onClick={() => setInput({ ...input, username: s })}
-            >
-                {s}
-            </Button>
-            ))}
-        </Box>
-        )}
+          )}
 
-          <TextField
-            fullWidth
-            label="Email"
-            type="email"
-            variant="outlined"
-            margin="normal"
-            value={input.email}
-            onChange={(e) => setInput({ ...input, email: e.target.value })}
-            required
-            sx={inputStyles}
-          />
-
-
-          <Box sx={{ display: "flex", gap: "1rem", width: "100%" }}>
+          <form onSubmit={handleSignup}>
             <TextField
-              label="Password"
+              fullWidth
+              label="Full Name"
+              name="name"
+              variant="outlined"
+              margin="normal"
+              value={input.name}
+              onChange={handleChange}
+              required
+              InputLabelProps={{ style: { color: "#aaa" } }}
+              sx={{
+                input: { color: "#fff" },
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": { borderColor: "#555" },
+                  "&:hover fieldset": { borderColor: "#f9d342" },
+                  "&.Mui-focused fieldset": { borderColor: "#f9d342" },
+                },
+              }}
+            />
+
+            <TextField
+              fullWidth
+              label="Username"
+              name="username"
+              variant="outlined"
+              margin="normal"
+              value={input.username}
+              onChange={handleChange}
+              required
+              InputLabelProps={{ style: { color: "#aaa" } }}
+              sx={{
+                input: { color: "#fff" },
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": { borderColor: "#555" },
+                  "&:hover fieldset": { borderColor: "#f9d342" },
+                  "&.Mui-focused fieldset": { borderColor: "#f9d342" },
+                },
+              }}
+              helperText={
+                usernameStatus === null
+                  ? ""
+                  : usernameStatus
+                  ? "✨ Available"
+                  : "❌ Taken"
+              }
+              FormHelperTextProps={{
+                style: {
+                  color: usernameStatus ? "#ADFF2F" : "#FF6347",
+                },
+              }}
+            />
+
+            {usernameStatus === false && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" color="#ddd">
+                  Try one of these:
+                </Typography>
+                {suggestedUsernames.map((s, i) => (
+                  <Button
+                    key={i}
+                    variant="text"
+                    onClick={() => setInput({ ...input, username: s })}
+                    sx={{ color: "#BA55D3", textTransform: "none" }}
+                  >
+                    {s}
+                  </Button>
+                ))}
+              </Box>
+            )}
+
+            <TextField
+              fullWidth
+              label="Owl Mail"
+              name="email"
+              type="email"
+              variant="outlined"
+              margin="normal"
+              value={input.email}
+              onChange={handleChange}
+              required
+              InputLabelProps={{ style: { color: "#aaa" } }}
+              sx={{
+                input: { color: "#fff" },
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": { borderColor: "#555" },
+                  "&:hover fieldset": { borderColor: "#f9d342" },
+                  "&.Mui-focused fieldset": { borderColor: "#f9d342" },
+                },
+              }}
+            />
+
+            <TextField
+              fullWidth
+              label="Secret Spell"
+              name="password"
               type={showPassword ? "text" : "password"}
               variant="outlined"
               margin="normal"
               value={input.password}
-              onChange={(e) => setInput({ ...input, password: e.target.value })}
+              onChange={handleChange}
               required
-              sx={{ ...inputStyles, flex: 1 }}
+              InputLabelProps={{ style: { color: "#aaa" } }}
+              sx={{
+                input: { color: "#fff" },
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": { borderColor: "#555" },
+                  "&:hover fieldset": { borderColor: "#f9d342" },
+                  "&.Mui-focused fieldset": { borderColor: "#f9d342" },
+                },
+              }}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -296,109 +398,111 @@ const SignupPage = () => {
                       edge="end"
                     >
                       {showPassword ? (
-                        <VisibilityOff sx={{ color: "#ffffff" }} />
+                        <VisibilityOff sx={{ color: "#f9d342" }} />
                       ) : (
-                        <Visibility sx={{ color: "#ffffff" }} />
+                        <Visibility sx={{ color: "#f9d342" }} />
                       )}
                     </IconButton>
                   </InputAdornment>
                 ),
               }}
             />
+
             <TextField
-              label="Confirm Password"
+              fullWidth
+              label="Confirm Secret Spell"
+              name="confirmPassword"
               type={showConfirmPassword ? "text" : "password"}
               variant="outlined"
               margin="normal"
               value={input.confirmPassword}
-              onChange={(e) =>
-                setInput({ ...input, confirmPassword: e.target.value })
-              }
+              onChange={handleChange}
               required
-              sx={{ ...inputStyles, flex: 1 }}
+              InputLabelProps={{ style: { color: "#aaa" } }}
+              sx={{
+                input: { color: "#fff" },
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": { borderColor: "#555" },
+                  "&:hover fieldset": { borderColor: "#f9d342" },
+                  "&.Mui-focused fieldset": { borderColor: "#f9d342" },
+                },
+              }}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       edge="end"
                     >
                       {showConfirmPassword ? (
-                        <VisibilityOff sx={{ color: "#ffffff" }} />
+                        <VisibilityOff sx={{ color: "#f9d342" }} />
                       ) : (
-                        <Visibility sx={{ color: "#ffffff" }} />
+                        <Visibility sx={{ color: "#f9d342" }} />
                       )}
                     </IconButton>
                   </InputAdornment>
                 ),
               }}
             />
-          </Box>
 
-          <Button fullWidth variant="contained" type="submit" sx={buttonStyles}>
-            Sign Up
+            <Button
+              fullWidth
+              variant="contained"
+              type="submit"
+              sx={{
+                mt: 2,
+                backgroundColor: "#6E1EFF",
+                fontWeight: "bold",
+                "&:hover": { backgroundColor: "#5714D9" },
+              }}
+            >
+              Complete Enrollment
+            </Button>
+          </form>
+
+          <Typography
+            variant="body2"
+            sx={{ mt: 2, color: "#aaa", textAlign: "center" }}
+          >
+            Already enrolled?{" "}
+            <Link to="/login" style={{ color: "#f9d342", fontWeight: "bold" }}>
+              Access the portal
+            </Link>
+          </Typography>
+
+          <Divider sx={{ my: 3, borderColor: "#444" }}>OR</Divider>
+
+          <Button
+            fullWidth
+            variant="outlined"
+            startIcon={<GoogleIcon />}
+            onClick={handleGoogleSignup}
+            sx={{
+              mb: 2,
+              borderColor: "#f9d342",
+              color: "#f9d342",
+              "&:hover": { backgroundColor: "#292744" },
+            }}
+          >
+            Enroll with Google
           </Button>
-        </form>
 
-        <Divider sx={{ my: 1 }}></Divider>
-
-        <Button
-          fullWidth
-          variant="outlined"
-          startIcon={<GoogleIcon />}
-          sx={socialButtonStyles}
-          onClick={handleGoogleSignup}
-        >
-          Continue with Google
-        </Button>
-
-        <Button
-          fullWidth
-          variant="outlined"
-          startIcon={<FacebookIcon />}
-          sx={socialButtonStyles}
-        >
-          Continue with Facebook
-        </Button>
-
-        <Typography variant="body2" sx={{ mt: 2, color: "#ffffff" }}>
-          Already have an account?{" "}
-          <Link to="/login" style={{ color: "#6E1EFF", fontWeight: "bold" }}>
-            Login here
-          </Link>
-        </Typography>
-      </Paper>
+          <Button
+            fullWidth
+            variant="outlined"
+            startIcon={<FacebookIcon />}
+            sx={{
+              borderColor: "#f9d342",
+              color: "#f9d342",
+              "&:hover": { backgroundColor: "#292744" },
+            }}
+          >
+            Enroll with Facebook
+          </Button>
+        </Box>
+      </Box>
     </Box>
   );
-};
-
-const inputStyles = {
-  "& label.Mui-focused": { color: "#ffffff" },
-  "& .MuiOutlinedInput-root": {
-    "& fieldset": { borderColor: "#6E1EFF" },
-    "&:hover fieldset": { borderColor: "#ffffff" },
-    "&.Mui-focused fieldset": { borderColor: "#ffffff" },
-  },
-  "& .MuiInputBase-input": { color: "#ffffff" },
-};
-
-const buttonStyles = {
-  mt: 2,
-  backgroundColor: "#6E1EFF",
-  color: "#ffffff",
-  "&:hover": { backgroundColor: "#5714D9" },
-};
-
-const socialButtonStyles = {
-  mb: 2,
-  borderColor: "#ffffff",
-  color: "#ffffff",
-  "&:hover": {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderColor: "#ffffff",
-  },
 };
 
 export default SignupPage;
