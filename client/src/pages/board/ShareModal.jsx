@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { shareBoardWithUser } from "../../apis/boardApi";
 import { getAllUsers } from "../../apis/userApi";
-import { IoClose, IoCheckmark } from "react-icons/io5";
+import { IoClose, IoCheckmark, IoCopyOutline } from "react-icons/io5";
 import { toast } from "react-hot-toast";
 
 const ShareModal = ({ closeModal, sharedWith = [] }) => {
@@ -12,15 +12,19 @@ const ShareModal = ({ closeModal, sharedWith = [] }) => {
   const [allUsers, setAllUsers] = useState([]);
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
 
   const currentUser = useSelector((state) => state.auth.user);
 
   useEffect(() => {
+    // Generate the shareable URL
+    const url = `${window.location.origin}/create/${boardID}`;
+    setShareUrl(url);
+    
     const fetchUsers = async () => {
       setLoading(true);
       try {
         const users = await getAllUsers();
-        console.log(users);
         const userArray = Array.isArray(users) ? users : users.data || [];
         const filteredUsers = userArray.filter(user => user.firebaseUID !== currentUser.uid);
         setAllUsers(filteredUsers);
@@ -30,7 +34,7 @@ const ShareModal = ({ closeModal, sharedWith = [] }) => {
       setLoading(false);
     };
     fetchUsers();
-  }, [currentUser]);
+  }, [currentUser, boardID]);
 
   useEffect(() => {
     if (query.trim() === "") {
@@ -65,6 +69,23 @@ const ShareModal = ({ closeModal, sharedWith = [] }) => {
     }
   };
 
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => {
+        toast.success('URL copied to clipboard!', {
+          icon: '📋',
+          style: {
+            borderRadius: '10px',
+            background: '#333',
+            color: '#fff',
+          },
+        });
+      })
+      .catch(() => {
+        toast.error('Failed to copy URL');
+      });
+  };
+
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm">
       <div className="bg-gradient-to-br from-[#1e1a16] to-[#372f26] rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative border-2 border-yellow-600 shadow-[0_0_20px_rgba(210,180,40,0.5)]">
@@ -76,6 +97,29 @@ const ShareModal = ({ closeModal, sharedWith = [] }) => {
         </button>
 
         <h2 className="text-2xl font-harry text-yellow-300 mb-4 text-center">Share This Board</h2>
+
+        {/* Share URL Section */}
+        <div className="mb-6">
+          <h3 className="text-yellow-300 mb-2 font-semibold">Share via Link</h3>
+          <div className="flex">
+            <input
+              type="text"
+              value={shareUrl}
+              readOnly
+              className="flex-1 bg-gray-800 text-white border border-yellow-600 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm truncate"
+            />
+            <button
+              onClick={copyToClipboard}
+              className="bg-yellow-600 hover:bg-yellow-700 text-black font-semibold px-4 py-2 rounded-r-lg transition-colors flex items-center gap-1"
+              title="Copy to clipboard"
+            >
+              <IoCopyOutline size={18} />
+            </button>
+          </div>
+          <p className="text-xs text-yellow-200 mt-1 italic">
+            Anyone with this link can view the board (must be logged in)
+          </p>
+        </div>
 
         <div className="flex mb-6">
           <input

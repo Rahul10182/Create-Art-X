@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import ShareModal from "./ShareModal";
 import ChatModal from "../../components/chat/ChatModal";
 import ActiveUsers from "../../components/liveblocks/ActiveUsers";
-import { FaShare, FaComments } from "react-icons/fa";
+import { FaShare, FaComments, FaHome } from "react-icons/fa";
+import { Link } from "react-router-dom";
 
 const Topbar = ({ title }) => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -10,7 +11,16 @@ const Topbar = ({ title }) => {
 
   return (
     <div className="w-full flex items-center justify-between bg-gradient-to-r from-[#1e1a16] to-[#372f26] px-6 py-3 shadow-md z-20">
-      <h2 className="text-2xl font-harry text-yellow-300">{title}</h2>
+      <div className="flex items-center gap-4">
+        <Link 
+          to="/dashboard" 
+          className="text-yellow-300 hover:text-yellow-400 transition-colors"
+          title="Go to Home"
+        >
+          <FaHome className="text-2xl" />
+        </Link>
+        <h2 className="text-2xl font-harry text-yellow-300">{title}</h2>
+      </div>
 
       <div className="flex items-center gap-6">
         <div className="bg-black/30 px-3 py-1 rounded-lg">

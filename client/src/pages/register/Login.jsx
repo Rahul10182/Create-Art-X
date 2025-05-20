@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Paper,
@@ -8,60 +8,56 @@ import {
   Divider,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../firebase/config";
-import { loginUser } from "../../apis/authApi"; // Backend API call
+import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { auth, googleProvider } from "../../firebase/config";
+import { loginUser } from "../../apis/authApi";
 import { useDispatch } from "react-redux";
-import { loginSuccess } from "../../redux/authSlice"; 
-import Lottie from "lottie-react"; // Import Lottie
-import backgroundAnimation from "../../assets/animations/background-animation.json";
-import { Typewriter } from "react-simple-typewriter"; // Import Typewriter
-import GoogleIcon from "@mui/icons-material/Google"; //Import Google Icon
-import FacebookIcon from "@mui/icons-material/Facebook"; // Import Facebook Icon
-import { signInWithPopup } from "firebase/auth";
-import { googleProvider } from "../../firebase/config";
+import { loginSuccess } from "../../redux/authSlice";
+import { Typewriter } from "react-simple-typewriter";
+import GoogleIcon from "@mui/icons-material/Google";
+import FacebookIcon from "@mui/icons-material/Facebook";
+import loginBg from "../../assets/login_background_image.avif";
+import Lottie from "lottie-react";
+import magicLottie from "../../assets/animations/login-animation.json";
 
 const LoginPage = () => {
   const [input, setInput] = useState({ email: "", password: "" });
-  const [error, setError] = useState(""); // Handle errors
+  const [error, setError] = useState("");
+  const [step, setStep] = useState("splash");
+
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // ✅ Handle Input Change
+  useEffect(() => {
+    const splashTimeout = setTimeout(() => setStep("login"), 7000);
+    return () => clearTimeout(splashTimeout);
+  }, []);
+
   const handleChange = (e) => {
     setInput({ ...input, [e.target.name]: e.target.value });
   };
 
-  // ✅ Handle Login
   const handleLogin = async (e) => {
-    e.preventDefault(); // Prevent page reload
-
+    e.preventDefault();
     try {
-      // 🔹 Firebase Authentication (Login with Email & Password)
       const userCredential = await signInWithEmailAndPassword(
         auth,
         input.email,
         input.password
       );
       const firebaseUser = userCredential.user;
-
-      // 🔹 Send Firebase UID to the backend
       const response = await loginUser(firebaseUser.uid);
-      console.log("response :",response.user)
       const user = response.user;
-
       dispatch(
         loginSuccess({
-            uid: user.firebaseUID,
-            name: user.name,
-            email: user.email,
-            username: user.username, 
+          uid: user.firebaseUID,
+          name: user.name,
+          email: user.email,
+          username: user.username,
         })
       );
-      
       navigate("/dashboard");
     } catch (error) {
-      console.error("Login error:", error.message);
       setError("Invalid email or password. Please try again.");
     }
   };
@@ -70,118 +66,160 @@ const LoginPage = () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const googleUser = result.user;
-  
-      // Call your backend with the UID
       const response = await loginUser(googleUser.uid);
       const user = response.user;
-      console.log("user :",user);
-
-  
       dispatch(
         loginSuccess({
-            uid: user.firebaseUID,
-            name: user.name,
-            email: user.email,
-            username: user.username,
+          uid: user.firebaseUID,
+          name: user.name,
+          email: user.email,
+          username: user.username,
         })
       );
-  
-      console.log("Google Login successful!");
       navigate("/dashboard");
     } catch (err) {
-      console.error("Google login error:", err.message);
       setError("Google login failed. Please try again.");
     }
   };
-  
 
+  // SPLASH SCREEN
+  if (step === "splash") {
+    return (
+      <Box
+        sx={{
+          height: "100vh",
+          width: "100vw",
+          backgroundImage: `url(${loginBg})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#f9d342",
+          textShadow: "0 0 10px #f9d342, 0 0 20px #6E1EFF",
+          fontFamily: "'Harry P', serif",
+          fontSize: "2rem",
+        }}
+      >
+        <Typewriter
+          words={[
+            "Welcome to the Wizarding Realm...",
+            "Your journey begins at Hogwarts...",
+            "Only the chosen ones may pass...",
+          ]}
+          loop={0}
+          cursor
+          cursorStyle="|"
+          typeSpeed={50}
+          deleteSpeed={40}
+          delaySpeed={2000}
+        />
+      </Box>
+    );
+  }
+
+  // LOGIN SCREEN
   return (
     <Box
       sx={{
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
         height: "100vh",
-        position: "relative",
-        overflow: "hidden",
-        px: 2,
+        backgroundColor: "#0f0c29",
+        color: "#ffffff",
       }}
     >
-      {/* Background Animation */}
+      {/* LEFT: Lottie + Message */}
       <Box
         sx={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          zIndex: -1,
-        }}
-      >
-        <Lottie animationData={backgroundAnimation} loop autoPlay />
-      </Box>
-  
-      {/* Content Container */}
-      <Box
-        sx={{
+          flex: 1,
+          position: "relative",
           display: "flex",
           flexDirection: "column",
-          alignItems: "center",
-          gap: 4,
         }}
       >
-        {/* Typewriter Effect Text */}
-        <Typography
-          variant="h4"
+        <Box
           sx={{
-            fontWeight: "bold",
-            color: "#ffffff",
-            textShadow: "0px 0px 10px rgba(255, 255, 255, 0.8)",
+            position: "absolute",
+            top: "20%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 2,
             textAlign: "center",
+            color: "#f9d342",
+            textShadow: "0 0 10px #f9d342, 0 0 20px #6E1EFF",
+            fontFamily: "'Harry P', serif",
+            fontSize: "2rem",
+            px: 3,
+            width: "100%",
           }}
         >
           <Typewriter
-            words={["Hello there! Login Now"]}
-            loop={true}
+            words={["Welcome back, wizard!"]}
+            loop={0}
             cursor
             cursorStyle="|"
             typeSpeed={50}
-            deleteSpeed={30}
+            deleteSpeed={40}
+            delaySpeed={2000}
           />
-        </Typography>
-  
-        {/* Login Card */}
-        <Paper
-          elevation={10}
+        </Box>
+        <Lottie
+          animationData={magicLottie}
+          loop
+          autoplay
+          style={{
+            width: "100%",
+            height: "100%",
+            position: "absolute",
+            top: 0,
+            left: 0,
+            zIndex: 1,
+          }}
+        />
+      </Box>
+
+      {/* RIGHT: Login Form */}
+      <Box
+        sx={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          px: 4,
+        }}
+      >
+        <Box
           sx={{
             width: "100%",
-            maxWidth: "400px",
-            padding: "2rem",
-            background: "rgba(255, 255, 255, 0.1)",
-            backdropFilter: "blur(10px)",
-            borderRadius: "20px",
-            boxShadow: "0px 4px 30px rgba(110, 30, 255, 0.5)",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
-            textAlign: "center",
+            maxWidth: 400,
+            p: 4,
+            backgroundColor: "#1c1b29",
+            borderRadius: "12px",
+            boxShadow: "0 0 20px rgba(255, 255, 255, 0.1)",
           }}
         >
           <Typography
-            variant="h5"
-            sx={{ mb: 2, fontWeight: "bold", color: "#ffffff" }}
+            variant="h4"
+            sx={{
+              fontFamily: "'Harry P', serif",
+              color: "#f9d342",
+              textAlign: "center",
+              mb: 2,
+            }}
           >
-            Welcome Back
+            Hogwarts Login
           </Typography>
-  
+
           {error && (
-            <Typography color="error" sx={{ mb: 2 }}>
+            <Typography color="error" sx={{ mb: 2, textAlign: "center" }}>
               {error}
             </Typography>
           )}
-  
-          <form onSubmit={handleLogin} style={{ width: "100%" }}>
+
+          <form onSubmit={handleLogin}>
             <TextField
               fullWidth
-              label="Email"
+              label="Owl Mail"
               name="email"
               type="email"
               variant="outlined"
@@ -189,18 +227,19 @@ const LoginPage = () => {
               value={input.email}
               onChange={handleChange}
               required
+              InputLabelProps={{ style: { color: "#aaa" } }}
               sx={{
-                "& label.Mui-focused": { color: "#ffffff" },
+                input: { color: "#fff" },
                 "& .MuiOutlinedInput-root": {
-                  "& fieldset": { borderColor: "#6E1EFF" },
-                  "&:hover fieldset": { borderColor: "#ffffff" },
-                  "&.Mui-focused fieldset": { borderColor: "#ffffff" },
+                  "& fieldset": { borderColor: "#555" },
+                  "&:hover fieldset": { borderColor: "#f9d342" },
+                  "&.Mui-focused fieldset": { borderColor: "#f9d342" },
                 },
               }}
             />
             <TextField
               fullWidth
-              label="Password"
+              label="Secret Spell"
               name="password"
               type="password"
               variant="outlined"
@@ -208,12 +247,13 @@ const LoginPage = () => {
               value={input.password}
               onChange={handleChange}
               required
+              InputLabelProps={{ style: { color: "#aaa" } }}
               sx={{
-                "& label.Mui-focused": { color: "#ffffff" },
+                input: { color: "#fff" },
                 "& .MuiOutlinedInput-root": {
-                  "& fieldset": { borderColor: "#6E1EFF" },
-                  "&:hover fieldset": { borderColor: "#ffffff" },
-                  "&.Mui-focused fieldset": { borderColor: "#ffffff" },
+                  "& fieldset": { borderColor: "#555" },
+                  "&:hover fieldset": { borderColor: "#f9d342" },
+                  "&.Mui-focused fieldset": { borderColor: "#f9d342" },
                 },
               }}
             />
@@ -224,70 +264,57 @@ const LoginPage = () => {
               sx={{
                 mt: 2,
                 backgroundColor: "#6E1EFF",
-                color: "#ffffff",
+                fontWeight: "bold",
                 "&:hover": { backgroundColor: "#5714D9" },
               }}
             >
-              Login
+              Unlock the Portal
             </Button>
           </form>
-  
-          <Typography variant="body2" sx={{ mt: 2, color: "#ffffff" }}>
-            First time here?{" "}
-            <Link
-              to="/signup"
-              style={{
-                color: "#6E1EFF",
-                fontWeight: "bold",
-                textDecoration: "none",
-              }}
-            >
-              Sign up now
+
+          <Typography
+            variant="body2"
+            sx={{ mt: 2, color: "#aaa", textAlign: "center" }}
+          >
+            Muggle?{" "}
+            <Link to="/signup" style={{ color: "#f9d342", fontWeight: "bold" }}>
+              Register now
             </Link>
           </Typography>
-  
-          <Divider sx={{ my: 3, borderColor: "#ffffff" }}>OR</Divider>
-  
+
+          <Divider sx={{ my: 3, borderColor: "#444" }}>OR</Divider>
+
           <Button
             fullWidth
             variant="outlined"
-            color="inherit"
             startIcon={<GoogleIcon />}
             onClick={handleGoogleLogin}
             sx={{
               mb: 2,
-              borderColor: "#ffffff",
-              color: "#ffffff",
-              "&:hover": {
-                backgroundColor: "rgba(255, 255, 255, 0.1)",
-                borderColor: "#ffffff",
-              },
+              borderColor: "#f9d342",
+              color: "#f9d342",
+              "&:hover": { backgroundColor: "#292744" },
             }}
           >
-            Continue with Google
+            Enter with Google
           </Button>
-  
+
           <Button
             fullWidth
             variant="outlined"
-            color="inherit"
             startIcon={<FacebookIcon />}
             sx={{
-              borderColor: "#ffffff",
-              color: "#ffffff",
-              "&:hover": {
-                backgroundColor: "rgba(255, 255, 255, 0.1)",
-                borderColor: "#ffffff",
-              },
+              borderColor: "#f9d342",
+              color: "#f9d342",
+              "&:hover": { backgroundColor: "#292744" },
             }}
           >
-            Continue with Facebook
+            Enter with Facebook
           </Button>
-        </Paper>
+        </Box>
       </Box>
     </Box>
   );
-  
 };
 
 export default LoginPage;

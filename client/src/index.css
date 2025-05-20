@@ -1,11 +1,8 @@
 @import "tailwindcss";
 
-.btn-purple {
-    @apply px-4 py-2 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition;
-  }
   
   @font-face {
-    font-family: 'HarryP'; /* this should match tailwind.config.js */
+    font-family: 'HarryP';
     src: url('/fonts/HARRYP__.TTF') format('truetype');
     font-display: swap;
   }
