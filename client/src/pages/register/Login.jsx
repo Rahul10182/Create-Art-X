@@ -299,18 +299,6 @@ const LoginPage = () => {
             Enter with Google
           </Button>
 
-          <Button
-            fullWidth
-            variant="outlined"
-            startIcon={<FacebookIcon />}
-            sx={{
-              borderColor: "#f9d342",
-              color: "#f9d342",
-              "&:hover": { backgroundColor: "#292744" },
-            }}
-          >
-            Enter with Facebook
-          </Button>
         </Box>
       </Box>
     </Box>
