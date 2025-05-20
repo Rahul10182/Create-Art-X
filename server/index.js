@@ -251,22 +251,25 @@ io.on("connection", (socket) => {
 
   socket.on("deleteShape", ({ boardId, shapeId }) => {
     try {
-      if (!boardId || !shapeId) {
-        throw new Error('Missing required parameters');
-      }
-
-      console.log(`Deleting shape ${shapeId} from board ${boardId}`);
       const board = drawingBoards.get(boardId);
+      console.log(" delete hhh  :  ",board);
+      console.log( shapeId);
       if (!board) {
         throw new Error(`Board ${boardId} not found`);
       }
 
+      // Remove shape
+      console.log("before deleting",board.shapes);
       board.shapes = board.shapes.filter(s => s.id !== shapeId);
-      socket.to(boardId).emit("shapeDeleted", shapeId);
+      console.log("after deleting",board.shapes);
+
+      // Broadcast deletion to all other clients
+      socket.to(boardId).emit("shapeDeleted", { shapeId });
     } catch (error) {
       handleSocketError(error, 'deleteShape');
     }
   });
+
 
   // Handle clear board
   socket.on("clearBoard", (boardId) => {

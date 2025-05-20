@@ -5,18 +5,20 @@ import {
   LiveblocksProvider,
   RoomProvider,
 } from "@liveblocks/react/suspense";
-import Canvas from './Canvas';
+import Canvas from './canvas';
 import ToolControls from './ToolControls';
 import Topbar from './Topbar';
 import { updateCanvasSize } from '../../apis/boardApi';
 import hogwartsGallery from '../../assets/hogwartsGallary.jpg';
 import { UserPresence } from '../../components/liveblocks/UserPresence';
+import LiveCursors from '../../components/liveblocks/LiveCursor'; // Import the LiveCursors component
 
-const publicApiKey = import.meta.env.VITE_LIVEBLOCKS_PUBLIC_KEY;
+const publicApiKey = import.meta.env.VITE_LIVEBLOCKS_PUBLIC_KEY || "pk_dev_RlYQeoj5sKuN1KRvy_vJVqz2lrE9inBvvPPPvn2z9qHjHO8WdgP47jaKc-vwoL4l";
 
 if (!publicApiKey) {
   console.error("Liveblocks public API key is missing or empty.");
 }
+
 
 const DrawingBoardContent = () => {
   const canvasRef = useRef(null);
@@ -90,6 +92,9 @@ const DrawingBoardContent = () => {
       className="min-h-screen bg-cover bg-center text-yellow-100 font-harry relative overflow-hidden"
       style={{ backgroundImage: `url(${hogwartsGallery})` }}
     >
+      {/* Add LiveCursors component here */}
+      <LiveCursors />
+      
       <div className="flex flex-col min-h-screen px-4 py-4 relative z-10">
         <Topbar title="Hogwarts Drawing" />
         
@@ -130,6 +135,7 @@ const DrawingBoardContent = () => {
 
 const DrawingBoard = () => {
   const { boardID } = useParams();
+  const { user } = useSelector((state) => state.auth);
   console.log("[DrawingBoard] Board ID:", boardID); // Debug
 
   if (!boardID) {
@@ -142,10 +148,10 @@ const DrawingBoard = () => {
       <RoomProvider 
         id={boardID}
         initialPresence={{
-          cursor:null,
-          name: "",
-          email: "",
-          avatarIndex: 0
+          cursor: null, // Make sure cursor is in initial presence
+          name: user?.name || "Anonymous",
+          email: user?.email || "",
+          avatarIndex: 0,
         }}
       >
         <DrawingBoardContent />

@@ -36,6 +36,7 @@ const RenderImage = ({ shape, onUpdate, onError }) => {
       y={shape.y}
       width={shape.width}
       height={shape.height}
+      rotation={shape.rotation}
       draggable={true}
       onDragEnd={(e) => {
         try {
@@ -184,10 +185,10 @@ const Canvas = ({ boardID, userId }) => {
       });
 
       socketRef.current.on("shapeDeleted", (shapeId) => {
-        console.log("Received shape deletion:", shapeId);
         try {
+          console.log("in socket", shapeId.shapeId);
           if (!shapeId) throw new Error("Missing shape ID");
-          setShapes((prev) => prev.filter((shape) => shape.id !== shapeId));
+          setShapes((prev) => prev.filter((shape) => shape.id !== shapeId.shapeId));
         } catch (error) {
           handleError(error, "Deleting remote shape");
         }
@@ -258,10 +259,8 @@ const Canvas = ({ boardID, userId }) => {
   const emitDeleteShape = useCallback(
     (shapeId) => {
       try {
-        if (!socketRef.current?.connected) {
-          console.error("Socket not connected when trying to delete shape");
-          return;
-        }
+        console.log("shapes Id ", shapeId)
+        if (!socketRef.current?.connected) return;
         socketRef.current.emit("deleteShape", {
           boardId: boardID,
           shapeId,
@@ -378,13 +377,38 @@ const Canvas = ({ boardID, userId }) => {
   // Drawing handlers
   const handleMouseDown = (e) => {
     try {
+      if (tool === 'fill') {
+        const pos = e.target.getStage().getPointerPosition();
+        const shapeToFill = shapes.find(shape => {
+          const node = stageRef.current.findOne('#' + shape.id);
+          if (!node) return false;
+
+          const rect = node.getClientRect();
+          return (
+            rect.x <= pos.x &&
+            rect.y <= pos.y &&
+            rect.x + rect.width >= pos.x &&
+            rect.y + rect.height >= pos.y
+          );
+        });
+
+        if (shapeToFill) {
+          const updatedFill = fillColor === 'transparent' ? undefined : fillColor;
+          const updatedShapes = shapes.map(s =>
+            s.id === shapeToFill.id ? { ...s, fill: updatedFill } : s
+          );
+          setShapes(updatedShapes);
+          emitUpdateShape(shapeToFill.id, { fill: updatedFill });
+        }
+        return;
+      }
+
       if (tool === "select") {
         const clickedOnEmpty = e.target === e.target.getStage();
         if (clickedOnEmpty) {
           setSelectedId(null);
         } else {
           setSelectedId(e.target.id());
-          // Immediately update the transformer
           setTimeout(() => {
             if (trRef.current && e.target) {
               trRef.current.nodes([e.target]);
@@ -403,50 +427,107 @@ const Canvas = ({ boardID, userId }) => {
 
       if (tool === "eraser") {
         const pos = e.target.getStage().getPointerPosition();
-        const shapeToErase = shapes.find((shape) => {
-          const node = stageRef.current.findOne("#" + shape.id);
-          if (!node) return false;
-          return node.isPointInPos(pos);
-        });
+        const stage = stageRef.current.getStage();
+        const shapeAtPos = stage.getIntersection(pos);
 
-        if (shapeToErase) {
-          emitDeleteShape(shapeToErase.id);
+        if (shapeAtPos) {
+          const shapeId = shapeAtPos.id();
+          if (shapeId) {
+            console.log("Deleting shape with ID:", shapeId);
+            emitDeleteShape(shapeId);
+            setShapes((prev) => prev.filter(s => s.id !== shapeId));
+          }
         }
         return;
       }
 
       setIsDrawing(true);
       const pos = e.target.getStage().getPointerPosition();
-      const newShape = {
-        id: Date.now().toString(),
-        type: tool,
-        x: pos.x,
-        y: pos.y,
-        width: 0,
-        height: 0,
-        radius: 0,
-        points: tool === "pen" ? [pos.x, pos.y] : [pos.x, pos.y, pos.x, pos.y],
-        stroke: color,
-        strokeWidth: lineWidth,
-        fill: fillColor === "transparent" ? undefined : fillColor,
-        fontSize: fontSize,
-        rotation: 0,
-        outerRadius: 0,
-        innerRadius: 0,
-      };
-
-      if (tool === "star") {
-        newShape.outerRadius = 0;
-        newShape.innerRadius = 0;
-        newShape.numPoints = 5;
+      
+      // Initialize shape based on tool type
+      let newShape;
+      switch (tool) {
+        case "rectangle":
+          newShape = {
+            id: Date.now().toString(),
+            type: tool,
+            x: pos.x,
+            y: pos.y,
+            width: 0,
+            height: 0,
+            stroke: color,
+            strokeWidth: lineWidth,
+            fill: fillColor === "transparent" ? undefined : fillColor,
+          };
+          break;
+        case "circle":
+          newShape = {
+            id: Date.now().toString(),
+            type: tool,
+            x: pos.x,
+            y: pos.y,
+            radius: 0,
+            stroke: color,
+            strokeWidth: lineWidth,
+            fill: fillColor === "transparent" ? undefined : fillColor,
+          };
+          break;
+        case "line":
+        case "arrow":
+          newShape = {
+            id: Date.now().toString(),
+            type: tool,
+            points: [pos.x, pos.y, pos.x, pos.y],
+            stroke: color,
+            strokeWidth: lineWidth,
+          };
+          break;
+        case "pen":
+          newShape = {
+            id: Date.now().toString(),
+            type: tool,
+            points: [pos.x, pos.y],
+            stroke: color,
+            strokeWidth: lineWidth,
+            tension: 0.1,
+            lineCap: "round",
+            lineJoin: "round",
+          };
+          break;
+        case "triangle":
+          newShape = {
+            id: Date.now().toString(),
+            type: tool,
+            x: pos.x,
+            y: pos.y,
+            points: [pos.x, pos.y, pos.x, pos.y, pos.x, pos.y],
+            stroke: color,
+            strokeWidth: lineWidth,
+            fill: fillColor === "transparent" ? undefined : fillColor,
+            closed: true,
+          };
+          break;
+        case "star":
+          newShape = {
+            id: Date.now().toString(),
+            type: tool,
+            x: pos.x,
+            y: pos.y,
+            outerRadius: 0,
+            innerRadius: 0,
+            numPoints: 5,
+            stroke: color,
+            strokeWidth: lineWidth,
+            fill: fillColor === "transparent" ? undefined : fillColor,
+          };
+          break;
+        default:
+          return;
       }
 
-      // Add shape locally immediately for responsiveness
       setShapes((prev) => [...prev, newShape]);
       setSelectedId(newShape.id);
       setRedoStack([]);
-
-      // Then emit to server
       emitAddShape(newShape);
     } catch (error) {
       handleError(error, "Mouse down event");
@@ -465,59 +546,70 @@ const Canvas = ({ boardID, userId }) => {
 
       let updates = {};
 
-      if (tool === "pen") {
-        updates = {
-          points: [...lastShape.points, point.x, point.y],
-        };
-      } else {
-        switch (tool) {
-          case "rectangle":
-            updates = {
-              width: point.x - lastShape.x,
-              height: point.y - lastShape.y,
-            };
-            break;
-          case "circle":
-          case "triangle":
-            updates = {
-              radius: Math.sqrt(
+      switch (tool) {
+        case "rectangle":
+          updates = {
+            width: point.x - lastShape.x,
+            height: point.y - lastShape.y,
+          };
+          break;
+        case "circle":
+          updates = {
+            radius: Math.sqrt(
+              Math.pow(point.x - lastShape.x, 2) +
+                Math.pow(point.y - lastShape.y, 2)
+            ),
+          };
+          break;
+        case "line":
+        case "arrow":
+          updates = {
+            points: [lastShape.points[0], lastShape.points[1], point.x, point.y],
+          };
+          break;
+        case "pen":
+          updates = {
+            points: [...lastShape.points, point.x, point.y],
+          };
+          break;
+        case "triangle":
+          const width = point.x - lastShape.x;
+          const height = point.y - lastShape.y;
+          updates = {
+            points: [
+              lastShape.x + width / 2, lastShape.y, // top point
+              lastShape.x + width, lastShape.y + height, // right point
+              lastShape.x, lastShape.y + height, // left point
+            ],
+          };
+          break;
+        case "star":
+          updates = {
+            outerRadius: Math.max(
+              5,
+              Math.sqrt(
                 Math.pow(point.x - lastShape.x, 2) +
                   Math.pow(point.y - lastShape.y, 2)
-              ),
-            };
-            break;
-          case "line":
-          case "arrow":
-            updates = {
-              points: [lastShape.x, lastShape.y, point.x, point.y],
-            };
-            break;
-          case "star":
-            updates = {
-              outerRadius: Math.sqrt(
+              )
+            ),
+            innerRadius: Math.max(
+              3,
+              Math.sqrt(
                 Math.pow(point.x - lastShape.x, 2) +
                   Math.pow(point.y - lastShape.y, 2)
-              ),
-              innerRadius:
-                Math.sqrt(
-                  Math.pow(point.x - lastShape.x, 2) +
-                    Math.pow(point.y - lastShape.y, 2)
-                ) / 2,
-            };
-            break;
-          default:
-            break;
-        }
+              ) / 2
+            ),
+          };
+          break;
+        default:
+          break;
       }
 
-      // Update locally first for responsiveness
       setShapes((prev) =>
         prev.map((shape, i) =>
           i === prev.length - 1 ? { ...shape, ...updates } : shape
         )
       );
-
-      // Then emit to server
       emitUpdateShape(lastShape.id, updates);
     } catch (error) {
       handleError(error, "Mouse move event");
@@ -544,14 +636,22 @@ const Canvas = ({ boardID, userId }) => {
           y: textPosition.y,
           text: currentText,
           fontSize: fontSize,
-          fontFamily: "Times New Roman",
+          fontFamily: "Arial",
           fill: color,
           draggable: true,
         };
 
         if (selectedId) {
+          // Update existing text
+          setShapes(prev =>
+            prev.map(shape =>
+              shape.id === selectedId ? { ...shape, ...newText } : shape
+            )
+          );
           emitUpdateShape(selectedId, newText);
         } else {
+          // Add new text
+          setShapes(prev => [...prev, newText]);
           emitAddShape(newText);
         }
 
@@ -585,22 +685,25 @@ const Canvas = ({ boardID, userId }) => {
             };
           });
 
+          const scale = Math.min(
+            300 / img.width,
+            200 / img.height,
+            1
+          );
+
           const newImage = {
             id: Date.now().toString(),
             type: "image",
             src: event.target.result,
             x: 100,
             y: 100,
-            width: img.width > 300 ? 300 : img.width,
-            height: img.height > 200 ? 200 : img.height,
+            width: img.width * scale,
+            height: img.height * scale,
             draggable: true,
           };
 
-          // Add locally first
           setShapes((prev) => [...prev, newImage]);
           setSelectedId(newImage.id);
-
-          // Then emit to server
           emitAddShape(newImage);
         } catch (error) {
           handleError(error, "Image upload");
@@ -665,6 +768,65 @@ const Canvas = ({ boardID, userId }) => {
           x: e.target.x(),
           y: e.target.y(),
         };
+        emitUpdateShape(shape.id, updates);
+      },
+      onTransformEnd: (e) => {
+        const node = e.target;
+        let updates = {};
+        
+        if (shape.type === "image") {
+          updates = {
+            x: node.x(),
+            y: node.y(),
+            width: Math.max(5, node.width() * node.scaleX()),
+            height: Math.max(5, node.height() * node.scaleY()),
+            rotation: node.rotation(),
+          };
+        } else if (shape.type === "text") {
+          updates = {
+            x: node.x(),
+            y: node.y(),
+            scaleX: node.scaleX(),
+            scaleY: node.scaleY(),
+          };
+        } else if (shape.type === "rectangle") {
+          updates = {
+            x: node.x(),
+            y: node.y(),
+            width: Math.max(5, node.width() * node.scaleX()),
+            height: Math.max(5, node.height() * node.scaleY()),
+            rotation: node.rotation(),
+          };
+        } else if (shape.type === "circle") {
+          updates = {
+            x: node.x(),
+            y: node.y(),
+            radius: Math.max(5, node.radius() * node.scaleX()),
+            rotation: node.rotation(),
+          };
+        } else if (shape.type === "star") {
+          updates = {
+            x: node.x(),
+            y: node.y(),
+            outerRadius: Math.max(5, node.outerRadius() * node.scaleX()),
+            innerRadius: Math.max(3, node.innerRadius() * node.scaleX()),
+            rotation: node.rotation(),
+          };
+        } else if (shape.type === "triangle") {
+          updates = {
+            x: node.x(),
+            y: node.y(),
+            points: node.points().map((p, i) => {
+              return i % 2 === 0 
+                ? p * node.scaleX() 
+                : p * node.scaleY();
+            }),
+            rotation: node.rotation(),
+          };
+        }
+
+        node.scaleX(1);
+        node.scaleY(1);
         emitUpdateShape(shape.id, updates);
       },
     };
@@ -732,24 +894,14 @@ const Canvas = ({ boardID, userId }) => {
         );
       case "triangle":
         return (
-          <Group {...commonProps}>
-            <Line
-              points={[
-                0,
-                -shape.radius,
-                shape.radius,
-                shape.radius,
-                -shape.radius,
-                shape.radius,
-                0,
-                -shape.radius,
-              ]}
-              stroke={shape.stroke}
-              strokeWidth={shape.strokeWidth}
-              fill={shape.fill}
-              closed
-            />
-          </Group>
+          <Line
+            {...commonProps}
+            points={shape.points}
+            stroke={shape.stroke}
+            strokeWidth={shape.strokeWidth}
+            fill={shape.fill}
+            closed
+          />
         );
       case "star":
         return (
@@ -901,7 +1053,7 @@ const Canvas = ({ boardID, userId }) => {
                   }}
                   style={{
                     fontSize: `${fontSize}px`,
-                    fontFamily: "Times New Roman",
+                    fontFamily: "Arial",
                     color: color,
                     outline: "none",
                     resize: "none",
