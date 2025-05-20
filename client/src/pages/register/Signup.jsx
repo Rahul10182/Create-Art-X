@@ -45,10 +45,6 @@ const SignupPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  useEffect(() => {
-    const splashTimeout = setTimeout(() => setStep("signup"), 7000);
-    return () => clearTimeout(splashTimeout);
-  }, []);
 
   useEffect(() => {
     if (input.username.trim() === "") {
@@ -145,42 +141,7 @@ const SignupPage = () => {
     }
   };
 
-  // SPLASH SCREEN
-  if (step === "splash") {
-    return (
-      <Box
-        sx={{
-          height: "100vh",
-          width: "100vw",
-          backgroundImage: `url(${loginBg})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#f9d342",
-          textShadow: "0 0 10px #f9d342, 0 0 20px #6E1EFF",
-          fontFamily: "'Harry P', serif",
-          fontSize: "2rem",
-        }}
-      >
-        <Typewriter
-          words={[
-            "Preparing your magical journey...",
-            "The sorting hat awaits...",
-            "Your wizarding story begins...",
-          ]}
-          loop={0}
-          cursor
-          cursorStyle="|"
-          typeSpeed={50}
-          deleteSpeed={40}
-          delaySpeed={2000}
-        />
-      </Box>
-    );
-  }
-
+  
   // SIGNUP SCREEN
   return (
     <Box
@@ -255,7 +216,7 @@ const SignupPage = () => {
           sx={{
             width: "100%",
             maxWidth: 400,
-            p: 4,
+            p: 2,
             backgroundColor: "#1c1b29",
             borderRadius: "12px",
             boxShadow: "0 0 20px rgba(255, 255, 255, 0.1)",
@@ -267,7 +228,7 @@ const SignupPage = () => {
               fontFamily: "'Harry P', serif",
               color: "#f9d342",
               textAlign: "center",
-              mb: 2,
+              mb: 1,
             }}
           >
             Hogwarts Enrollment
@@ -373,7 +334,7 @@ const SignupPage = () => {
 
             <TextField
               fullWidth
-              label="Secret Spell"
+              label=" Password"
               name="password"
               type={showPassword ? "text" : "password"}
               variant="outlined"
@@ -410,7 +371,7 @@ const SignupPage = () => {
 
             <TextField
               fullWidth
-              label="Confirm Secret Spell"
+              label="Confirm Password"
               name="confirmPassword"
               type={showConfirmPassword ? "text" : "password"}
               variant="outlined"
@@ -470,7 +431,7 @@ const SignupPage = () => {
             </Link>
           </Typography>
 
-          <Divider sx={{ my: 3, borderColor: "#444" }}>OR</Divider>
+          <Divider sx={{ my: 1, borderColor: "#444" }}>OR</Divider>
 
           <Button
             fullWidth
@@ -487,18 +448,6 @@ const SignupPage = () => {
             Enroll with Google
           </Button>
 
-          <Button
-            fullWidth
-            variant="outlined"
-            startIcon={<FacebookIcon />}
-            sx={{
-              borderColor: "#f9d342",
-              color: "#f9d342",
-              "&:hover": { backgroundColor: "#292744" },
-            }}
-          >
-            Enroll with Facebook
-          </Button>
         </Box>
       </Box>
     </Box>
