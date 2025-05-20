@@ -12,6 +12,8 @@ import {
 } from "@mui/material";
 import { getBoards } from '../../apis/boardApi';
 import { logout } from '../../redux/authSlice';
+import { Link } from 'react-router-dom';
+
 
 const Navbar = ({ allBoards, setAllBoards }) => {
   const currentUser = useSelector((state) => state.auth.currentUser);
@@ -20,6 +22,9 @@ const Navbar = ({ allBoards, setAllBoards }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+
+  const { user } = useSelector((state) => state.auth); // Get user from Redux
+  console.log(user);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -44,25 +49,19 @@ const Navbar = ({ allBoards, setAllBoards }) => {
     }
   };
 
-  const filtered = constBoards.filter(board =>
-    (board?.title ?? '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  
-
   const handleSearch = () => {
     if (!searchTerm) {
       setAllBoards(constBoards);
       return;
     }
-  
+
     const filtered = constBoards.filter((board) => {
       const title = board?.title;
       return typeof title === 'string' && title.toLowerCase().includes(searchTerm.toLowerCase());
     });
-  
+
     setAllBoards(filtered);
   };
-  
 
   const handleAvatarClick = (event) => setAnchorEl(event.currentTarget);
   const handlePopoverClose = () => setAnchorEl(null);
@@ -82,46 +81,38 @@ const Navbar = ({ allBoards, setAllBoards }) => {
 
   return (
     <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-zinc-900 via-zinc-700 to-zinc-900 shadow-lg">
-      <div className="text-3xl font-bold text-white">Create-Art-X</div>
+      <Link to="/" className="text-3xl font-bold text-white hover:text-gray-300 transition-colors">
+        Create-Art-X
+      </Link>
+
 
       {/* Search Bar */}
-      <form
-        className="flex items-center bg-white rounded-lg overflow-hidden shadow-md"
-        onSubmit={(e) => {
-          e.preventDefault();
+      <input
+        type="text"
+        value={searchTerm}
+        onChange={(e) => {
+          setSearchTerm(e.target.value);
           handleSearch();
         }}
-      >
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            handleSearch();
-          }}
-          placeholder="Search Boards"
-          className="px-4 py-2 text-sm outline-none text-gray-700"
-        />
-        <button
-          type="submit"
-          className="px-4 py-2 bg-blue-500 text-white text-sm hover:bg-blue-600 transition-all"
-        >
-          Search
-        </button>
-        {isLoading && <span className="px-2 text-gray-600">...</span>}
-      </form>
+        placeholder="Search Boards..."
+        className="px-3 py-2 text-sm rounded-lg shadow-md outline-none text-gray-700 bg-white w-64"
+      />
 
       <div className="flex items-center gap-4">
-        {/* <button className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all">
-          Create New
-        </button> */}
+        {user?.name && (
+          <span className="bg-white mr-4 text-zinc-800 px-3 py-2 rounded-full text-sm font-semibold shadow-md hover:bg-zinc-100 transition-all">
+            {user.name}
+          </span>
+        )}
+
 
         <button
-          className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all"
+          className="px-6 py-2 mr-4 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all cursor-pointer"
           onClick={handleLogout}
         >
           Sign Out
         </button>
+
 
         {currentUser?.avatar && (
           <img
