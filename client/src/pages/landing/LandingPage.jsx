@@ -47,7 +47,7 @@ const LandingPage = () => {
         sx={{
           position: "absolute",
           inset: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.5)", // Darker to give more contrast
+          backgroundColor: "rgba(0, 0, 0, 0.1)", // Darker to give more contrast
           zIndex: 0,
         }}
       />
@@ -128,7 +128,7 @@ const LandingPage = () => {
             },
           }}
         >
-          Enter the Magic
+          Enter In The Hogwarts
         </Button>
       </Container>
 
