@@ -42,12 +42,11 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-parchment bg-cover bg-center text-yellow-100 font-harry bg-gradient-to-b bg-gray-900 bg-blend-overlay">
-    {user ? (
+      {user ? (
         <>
           <Navbar allBoards={allBoards} setAllBoards={setAllBoards} />
 
           <div className="max-w-7xl mx-auto px-6 py-12">
-            {/* Header */}
             <div className="text-center mb-14">
               <h1 className="text-6xl text-yellow-300 drop-shadow-[0_0_20px_gold] tracking-widest">
                 Welcome to the Wizard’s Task Chamber
@@ -57,15 +56,18 @@ const Home = () => {
               </p>
             </div>
 
-            {/* CreateNew Section - Centered */}
             <div className="flex justify-center mb-16">
               <CreateNew />
             </div>
 
-            {/* All Boards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-12">
               {allBoards.map((board) => (
-                <BoardCard key={board._id} boardID={board._id} />
+                <BoardCard
+                  key={board._id}
+                  boardID={board._id}
+                  setAllBoards={setAllBoards}
+                  allBoards={allBoards}
+                />
               ))}
             </div>
           </div>

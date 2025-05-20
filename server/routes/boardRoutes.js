@@ -1,5 +1,5 @@
 import express from "express";
-import { getBoards,createBoard ,getBoardDetails, getUsersInBoard, updateCanvasSize, shareBoardWithUser, updateBoardDetails, saveBoardForUser,getBoardForUser} from "../controllers/boardController.js";
+import { getBoards,createBoard ,getBoardDetails, getUsersInBoard, updateCanvasSize, shareBoardWithUser, updateBoardDetails, saveBoardForUser,getBoardForUser,createTemplate, deleteBoard} from "../controllers/boardController.js";
 
 const router = express.Router();
 
@@ -14,6 +14,8 @@ router.put('/:boardID', updateBoardDetails);
 router.get("/:boardID/users", getUsersInBoard);
 router.put("/canvas/:boardID", updateCanvasSize);
 router.post('/:boardId/share', shareBoardWithUser);
+router.post('/template/:boardId', createTemplate);
+router.delete('/delete/:boardID', deleteBoard);
 
 
 export default router;    
