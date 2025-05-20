@@ -2,6 +2,34 @@
 import Board from "../models/BoardModel.js";
 import User from "../models/UserModel.js";
 import cloudinary from "../config/cloudinary.js";
+import Template from "../models/TemplateModel.js";
+import mongoose from "mongoose";
+
+
+export const createTemplate = async (req, res) => {
+  const { boardId } = req.params;
+
+  try {
+    const board = await Board.findById(boardId);
+    if (!board) {
+      return res.status(404).json({ message: 'Board not found' });
+    }
+
+    const newTemplate = new Template({
+      name: board.name,                // use board's name
+      createdBy: board.createdBy,      // use board's creator
+      board: board._id,                // reference to board
+      boardId: board._id               // storing boardId explicitly too
+    });
+
+    const savedTemplate = await newTemplate.save();
+    res.status(201).json(savedTemplate);
+  } catch (err) {
+    console.error('Error creating template:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 
 export const updateCanvasSize = async (req, res) => {
   const { boardID } = req.params;
@@ -42,31 +70,56 @@ export const getBoards = async (req, res) => {
   }
 };
 
-
 export const createBoard = async (req, res) => {
-  const { firebaseUID } = req.body;
-
   try {
+    const { firebaseUID, title, columns, background, templateId } = req.body;
+
     const user = await User.findOne({ firebaseUID });
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const board = new Board({
-      title: "Untitled Canvas",
+    let templateBoardData = {};
+    if (templateId) {
+      const template = await Template.findById(templateId).populate("board");
+      if (!template || !template.board) {
+        return res.status(400).json({ error: "Invalid templateId or template board missing" });
+      }
+
+      // Copy shapes, content, canvas, etc.
+      templateBoardData = {
+        shapes: template.board.shapes,
+        content: template.board.content,
+        canvas: template.board.canvas,
+      };
+    }
+
+    const newBoard = new Board({
+      title: title || "New Magical Board",
       createdBy: user._id,
-      content: {}
+      columns: columns || [],
+      background: background || "#2e1a47",
+      ...templateBoardData,
     });
 
-    await board.save();
+    await newBoard.save();
 
-    user.boards.push(board._id);
+    user.boards.push(newBoard._id);
     await user.save();
 
-    res.status(201).json({ boardId: board._id });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to create board" });
+    res.status(201).json({
+      boardId: newBoard._id,
+      title: newBoard.title,
+      background: newBoard.background,
+      template: templateId || null
+    });
+  } catch (error) {
+    console.error("Error creating board:", error);
+    res.status(500).json({
+      error: "Failed to create board",
+      details: error.message
+    });
   }
 };
+
 
 //get board details
 export const getBoardDetails = async (req, res) => {
@@ -312,3 +365,27 @@ export const getBoardForUser = async (req, res) => {
     res.status(500).json({ message: 'Server Error' });
   }
 };
+
+
+export const deleteBoard = async (req, res) => {
+  const { boardID } = req.params;
+  console.log("Deleting board with ID:", boardID);
+
+  if (!mongoose.Types.ObjectId.isValid(boardID)) {
+    return res.status(400).json({ message: 'Invalid board ID' });
+  }
+
+  try {
+    const deletedBoard = await Board.findByIdAndDelete(boardID);
+    if (!deletedBoard) {
+      return res.status(404).json({ message: 'Board not found' });
+    }
+
+    res.status(200).json({ message: 'Board deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting board:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+

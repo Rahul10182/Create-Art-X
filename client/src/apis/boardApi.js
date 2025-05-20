@@ -15,9 +15,24 @@ export const getBoards = async (uid) => {
   }
 };
 // Create a new board
-export const createBoard = async (firebaseUID) => {
-  const response = await axios.post(`${API_BASE_URL}/boards/create`, { firebaseUID } );
-  return response.data.boardId;
+// export const createBoard = async (firebaseUID) => {
+//   const response = await axios.post(`${API_BASE_URL}/boards/create`, { firebaseUID } );
+//   return response.data.boardId;
+// };
+
+// Update the createBoard function in boardApi.js
+export const createBoard = async (boardData) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/boards/create`, boardData, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error creating board:', error.response?.data || error.message);
+    throw error;
+  }
 };
 
   
@@ -30,6 +45,15 @@ export const getBoardDetails = async (boardID) => {
     return response.data;
   } catch (error) {
     console.error('Error fetching board details:', error);
+    throw error;
+  }
+};
+export const deleteBoard = async (boardID) => {
+  try {
+    const response = await axios.delete(`${API_BASE_URL}/boards/delete/${boardID}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting board:', error);
     throw error;
   }
 };
