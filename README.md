@@ -34,12 +34,12 @@ Campus Art X is a collaborative, real-time **Canva-style web app** built for stu
   Uploads and design images are optimized and stored securely in the cloud.
 
 - 🎨 **Modern & Responsive UI**  
-  Styled with **Tailwind CSS** and **Material UI** for a clean, mobile-friendly experience.
+  Styled with **Tailwind CSS** and **Material UI** for a clean.
 
 ---
-## 🌐 Live Demo
+## 🌐 Demo Video
 
-> (https://drive.google.com/file/d/1EQf4KeXgUMhaVMou6kE5VhahliSUmg4g/view?usp=sharing)
+> https://drive.google.com/file/d/1EQf4KeXgUMhaVMou6kE5VhahliSUmg4g/view?usp=sharing
 
 ## 🛠️ Tech Stack
 
@@ -92,9 +92,10 @@ Campus Art X is a collaborative, real-time **Canva-style web app** built for stu
 
    # In another terminal, start frontend
    cd client
-   npm start
+   npm run dev
    ```
 ---
 ## Authors
 Anshul Verma - https://github.com/Anshulstark44
+
 Rahul Kumar Singh - https://github.com/Rahul10182
