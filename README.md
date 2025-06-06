@@ -1,6 +1,6 @@
-# 🖼️ Campus Art X
+# 🖼️ Create-Art-X
 
-Campus Art X is a collaborative, real-time **Canva-style web app** built for students, clubs, and creatives to easily design and share campus posters, banners, and more. It combines the power of live editing, smart templates, and social features — all in one seamless platform.
+Create Art X is a collaborative, real-time **Canva-style web app** built for students, clubs, and creatives to easily design and share campus posters, banners, and more. It combines the power of live editing, smart templates, and social features — all in one seamless platform.
 
 ---
 
